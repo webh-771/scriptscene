@@ -77,14 +77,15 @@ def split_script_into_sentences(script: str) -> List[str]:
 def generate_voiceover_with_gemini(script: str, voice_style: str = "Puck") -> tuple:
     """Generate voiceover using Gemini TTS and return audio data with timing info"""
     try:
-        model = genai.GenerativeModel('gemini-2.0-flash-exp')
+        # Use Gemini 2.5 Flash TTS model for audio generation
+        model = genai.GenerativeModel('gemini-2.5-flash-tts')
         
-        # Generate audio
+        # Generate audio with proper TTS configuration
         response = model.generate_content(
-            script,
+            f"Please read this script in a {voice_style.lower()} voice style: {script}",
             generation_config=genai.GenerationConfig(
-                response_modalities=["AUDIO"],
-                speech_config={"voice_config": {"prebuilt_voice_config": {"voice_name": voice_style}}}
+                temperature=0.7,
+                max_output_tokens=None
             )
         )
         
