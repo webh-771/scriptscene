@@ -13,10 +13,54 @@ import json
 import google.generativeai as genai
 from moviepy import VideoFileClip, ImageClip, TextClip, CompositeVideoClip, concatenate_videoclips, AudioFileClip, CompositeAudioClip, concatenate_audioclips
 import requests
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageFilter
 import io
 import wave
 import re
+
+ROOT_DIR = Path(__file__).parent
+
+def create_placeholder_image(width: int, height: int, text: str, index: int) -> str:
+    """Create a colored gradient placeholder image with text"""
+    # Color schemes for variety
+    colors = [
+        [(99, 102, 241), (139, 92, 246)],  # Indigo to Purple
+        [(59, 130, 246), (147, 51, 234)],  # Blue to Purple
+        [(236, 72, 153), (239, 68, 68)],   # Pink to Red
+        [(168, 85, 247), (236, 72, 153)],  # Purple to Pink
+        [(34, 197, 94), (59, 130, 246)],   # Green to Blue
+    ]
+    
+    color_pair = colors[index % len(colors)]
+    
+    # Create image
+    img = Image.new('RGB', (width, height))
+    draw = ImageDraw.Draw(img)
+    
+    # Create gradient
+    for y in range(height):
+        ratio = y / height
+        r = int(color_pair[0][0] + (color_pair[1][0] - color_pair[0][0]) * ratio)
+        g = int(color_pair[0][1] + (color_pair[1][1] - color_pair[0][1]) * ratio)
+        b = int(color_pair[0][2] + (color_pair[1][2] - color_pair[0][2]) * ratio)
+        draw.line([(0, y), (width, y)], fill=(r, g, b))
+    
+    # Add text overlay
+    try:
+        # Try to load a font (fallback to default if not available)
+        font = ImageDraw.Draw(img).textfont
+    except:
+        font = None
+    
+    # Add semi-transparent overlay
+    overlay = Image.new('RGBA', (width, height), (0, 0, 0, 100))
+    img = Image.alpha_composite(img.convert('RGBA'), overlay).convert('RGB')
+    
+    # Save to temp file
+    temp_path = TEMP_MEDIA_DIR / f\"placeholder_{index}_{width}x{height}.jpg\"
+    img.save(str(temp_path), 'JPEG', quality=95)
+    
+    return str(temp_path)
 
 logger = logging.getLogger(__name__)
 video_router = APIRouter()
