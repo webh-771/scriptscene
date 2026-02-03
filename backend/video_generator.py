@@ -305,7 +305,7 @@ async def generate_video_job(job_id: str, script: str, music_url: Optional[str],
         
         for img_path in image_clips:
             # Load image and resize to cover the frame (crop to fit)
-            clip = ImageClip(img_path).set_duration(clip_duration)
+            clip = ImageClip(img_path, duration=clip_duration)
             
             # Calculate resize to cover (crop center)
             img_aspect = clip.w / clip.h
