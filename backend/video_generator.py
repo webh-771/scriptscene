@@ -315,15 +315,15 @@ async def generate_video_job(job_id: str, script: str, music_url: Optional[str],
                 # Image is wider, fit height and crop width
                 new_height = video_height
                 new_width = int(new_height * img_aspect)
-                clip = clip.resize(height=new_height)
+                clip = clip.resized(height=new_height)
             else:
                 # Image is taller, fit width and crop height
                 new_width = video_width
                 new_height = int(new_width / img_aspect)
-                clip = clip.resize(width=new_width)
+                clip = clip.resized(width=new_width)
             
             # Crop to exact size from center
-            clip = clip.crop(
+            clip = clip.cropped(
                 x_center=clip.w/2, 
                 y_center=clip.h/2, 
                 width=video_width, 
