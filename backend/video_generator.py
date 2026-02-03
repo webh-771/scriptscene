@@ -221,13 +221,37 @@ def fetch_stock_images(keywords: List[str], count: int = 5) -> List[str]:
     return images[:count]
 
 def extract_keywords_from_script(script: str) -> List[str]:
-    """Extract keywords from script for image search"""
-    # Simple keyword extraction (in production, use NLP)
+    """Extract meaningful keywords from script for image search"""
+    # Split into words and clean
     words = re.findall(r'\b\w+\b', script.lower())
-    # Remove common words
-    stop_words = {'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'is', 'are', 'was', 'were'}
-    keywords = [w for w in words if w not in stop_words and len(w) > 3]
-    return keywords[:5]
+    
+    # Remove common stop words
+    stop_words = {
+        'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 
+        'of', 'with', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
+        'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'should',
+        'can', 'could', 'may', 'might', 'must', 'this', 'that', 'these', 'those',
+        'your', 'our', 'just', 'now', 'get', 'make', 'take', 'use', 'see', 'know'
+    }
+    
+    # Filter words: keep only meaningful words (length > 4, not stop words)
+    keywords = [w for w in words if w not in stop_words and len(w) > 4]
+    
+    # Remove duplicates while preserving order
+    seen = set()
+    unique_keywords = []
+    for kw in keywords:
+        if kw not in seen:
+            seen.add(kw)
+            unique_keywords.append(kw)
+    
+    # If we don't have enough keywords, add some generic ones
+    if len(unique_keywords) < 3:
+        generic_keywords = ['technology', 'business', 'modern', 'creative', 'success']
+        unique_keywords.extend(generic_keywords[:5 - len(unique_keywords)])
+    
+    logger.info(f"Extracted keywords: {unique_keywords[:5]}")
+    return unique_keywords[:5]
 
 def create_placeholder_image(width: int, height: int, color: tuple, text: str = "") -> str:
     """Create a solid color placeholder image with optional text"""
