@@ -193,6 +193,34 @@ def extract_keywords_from_script(script: str) -> List[str]:
     keywords = [w for w in words if w not in stop_words and len(w) > 3]
     return keywords[:5]
 
+def create_placeholder_image(width: int, height: int, color: tuple, text: str = "") -> str:
+    """Create a solid color placeholder image with optional text"""
+    img = Image.new('RGB', (width, height), color)
+    
+    if text:
+        draw = ImageDraw.Draw(img)
+        try:
+            # Try to use a nice font
+            font = ImageFont.truetype("arial.ttf", 60)
+        except:
+            # Fallback to default font
+            font = ImageFont.load_default()
+        
+        # Get text size and center it
+        bbox = draw.textbbox((0, 0), text, font=font)
+        text_width = bbox[2] - bbox[0]
+        text_height = bbox[3] - bbox[1]
+        x = (width - text_width) // 2
+        y = (height - text_height) // 2
+        
+        draw.text((x, y), text, fill='white', font=font)
+    
+    # Save to temp file
+    temp_id = str(uuid.uuid4())
+    img_path = TEMP_MEDIA_DIR / f"placeholder_{temp_id}.jpg"
+    img.save(img_path, 'JPEG', quality=85)
+    return str(img_path)
+
 def create_subtitle_clip(subtitle_text: str, duration: float, video_size: tuple) -> TextClip:
     """Create a subtitle text clip with styling"""
     return TextClip(
