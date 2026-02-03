@@ -99,62 +99,93 @@ def split_script_into_sentences(script: str) -> List[str]:
     sentences = re.split(r'[.!?]+', script)
     return [s.strip() for s in sentences if s.strip()]
 
-def generate_voiceover_with_gemini(script: str, voice_style: str = "Puck") -> tuple:
-    """Generate voiceover using Gemini TTS and return audio data with timing info"""
+def generate_voiceover_with_puter(script: str, voice_style: str = "Joanna") -> tuple:
+    """Generate voiceover using Puter TTS via headless browser"""
     try:
-        # For now, create a mock audio file since Gemini TTS API format is unclear
-        # In production, this would use the correct Gemini TTS API
-        logger.warning("Using mock audio generation - Gemini TTS API needs proper configuration")
-        
-        # Create a simple audio file with estimated duration
-        # Estimate 150 words per minute for speech
-        words = len(script.split())
-        estimated_duration = (words / 150) * 60  # Convert to seconds
-        estimated_duration = max(5, min(estimated_duration, 60))  # Between 5-60 seconds
-        
-        # Generate a simple tone as placeholder
-        import numpy as np
-        import wave
-        
-        sample_rate = 24000
-        duration = estimated_duration
-        frequency = 440  # A4 note
-        
-        # Generate sine wave
-        t = np.linspace(0, duration, int(sample_rate * duration), False)
-        audio_data = np.sin(frequency * 2 * np.pi * t) * 0.3
-        
-        # Convert to 16-bit integers
-        audio_data = (audio_data * 32767).astype(np.int16)
-        
-        # Save audio temporarily
-        audio_id = str(uuid.uuid4())
-        audio_path = AUDIO_FILES_DIR / f"{audio_id}.wav"
-        
-        # Write WAV file
-        with wave.open(str(audio_path), 'wb') as wav_file:
-            wav_file.setnchannels(1)
-            wav_file.setsampwidth(2)
-            wav_file.setframerate(sample_rate)
-            wav_file.writeframes(audio_data.tobytes())
-        
-        return str(audio_path), duration
-        
-        # Convert to WAV format
-        with wave.open(str(audio_path), 'wb') as wav_file:
-            wav_file.setnchannels(1)
-            wav_file.setsampwidth(2)
-            wav_file.setframerate(24000)
-            wav_file.writeframes(audio_data)
-        
-        # Get duration
-        with wave.open(str(audio_path), 'rb') as wav_file:
-            duration = wav_file.getnframes() / wav_file.getframerate()
-        
-        return str(audio_path), duration
-    
+        with sync_playwright() as p:
+            # Launch browser
+            browser = p.chromium.launch(headless=True)
+            page = browser.new_page()
+            
+            # Create HTML with Puter TTS
+            html_content = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <script src="https://js.puter.com/v2/"></script>
+            </head>
+            <body>
+                <div id="status">Generating audio...</div>
+                <script>
+                    async function generateAudio() {{
+                        try {{
+                            const audio = await puter.ai.txt2speech(`{script.replace('`', '\\`')}`, {{
+                                voice: "{voice_style}",
+                                engine: "neural"
+                            }});
+                            
+                            // Get audio blob
+                            const response = await fetch(audio.src);
+                            const blob = await response.blob();
+                            const reader = new FileReader();
+                            
+                            reader.onloadend = function() {{
+                                const base64data = reader.result.split(',')[1];
+                                document.getElementById('audio-data').textContent = base64data;
+                                document.getElementById('status').textContent = 'Audio generated!';
+                            }};
+                            
+                            reader.readAsDataURL(blob);
+                        }} catch(error) {{
+                            document.getElementById('status').textContent = 'Error: ' + error.message;
+                        }}
+                    }}
+                    
+                    generateAudio();
+                </script>
+                <div id="audio-data" style="display:none;"></div>
+            </body>
+            </html>
+            """
+            
+            page.set_content(html_content)
+            
+            # Wait for audio generation (max 30 seconds)
+            for i in range(60):
+                status = page.locator("#status").text_content()
+                if "Audio generated!" in status:
+                    break
+                if "Error" in status:
+                    raise Exception(f"Puter TTS error: {status}")
+                time.sleep(0.5)
+            
+            # Get base64 audio data
+            audio_data_b64 = page.locator("#audio-data").text_content()
+            if not audio_data_b64:
+                raise Exception("No audio data generated")
+            
+            # Decode base64 to audio bytes
+            audio_bytes = base64.b64decode(audio_data_b64)
+            
+            # Save audio file
+            audio_id = str(uuid.uuid4())
+            audio_path = AUDIO_FILES_DIR / f"{audio_id}.mp3"
+            
+            with open(audio_path, 'wb') as f:
+                f.write(audio_bytes)
+            
+            # Get duration using moviepy
+            audio_clip = AudioFileClip(str(audio_path))
+            duration = audio_clip.duration
+            audio_clip.close()
+            
+            browser.close()
+            
+            logger.info(f"Puter TTS generated: {duration:.1f}s audio")
+            return str(audio_path), duration
+            
     except Exception as e:
-        logger.error(f"Gemini TTS error: {str(e)}")
+        logger.error(f"Puter TTS error: {str(e)}")
         raise
 
 def generate_subtitles_from_script(script: str, duration: float) -> List[Dict]:
