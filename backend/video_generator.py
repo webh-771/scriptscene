@@ -165,7 +165,7 @@ def fetch_stock_images(keywords: List[str], count: int = 5) -> List[str]:
         for keyword in keywords[:count]:
             try:
                 response = requests.get(
-                    f"https://api.pexels.com/v1/search",
+                    "https://api.pexels.com/v1/search",
                     headers={"Authorization": pexels_api_key},
                     params={"query": keyword, "per_page": 1, "orientation": "portrait"},
                     timeout=10
