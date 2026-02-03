@@ -14,7 +14,7 @@ import google.generativeai as genai
 from moviepy import VideoFileClip, ImageClip, TextClip, CompositeVideoClip, concatenate_videoclips, AudioFileClip, CompositeAudioClip, concatenate_audioclips
 import requests
 from PIL import Image, ImageDraw, ImageFont
-from playwright.sync_api import sync_playwright
+from playwright.async_api import async_playwright
 import io
 import wave
 import re
