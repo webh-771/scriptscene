@@ -10,8 +10,7 @@ import asyncio
 from motor.motor_asyncio import AsyncIOMotorClient
 import json
 import google.generativeai as genai
-from moviepy.editor import *
-from moviepy.video.tools.subtitles import SubtitlesClip
+from moviepy import *
 import requests
 from PIL import Image, ImageDraw, ImageFont
 import io
