@@ -187,86 +187,83 @@ const VideoGeneratorPage = () => {
             </div>
 
             {/* Music Selection */}
-            <Card className="glass border-white/10">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Music className="h-5 w-5 text-primary" />
-                  Background Music
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Select value={selectedMusic} onValueChange={setSelectedMusic}>
-                  <SelectTrigger data-testid="music-select" className="bg-black/20 border-white/10">
-                    <SelectValue placeholder="Select music" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {musicTracks.map((track) => (
-                      <SelectItem key={track.id} value={track.url}>
-                        {track.title} - {track.genre}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </CardContent>
-            </Card>
+            <div className="brutal-card bg-[#FFE66D] p-6">
+              <div className="mb-4">
+                <h3 className="text-2xl font-black uppercase flex items-center gap-2">
+                  <Music className="h-6 w-6" />
+                  MUSIC
+                </h3>
+              </div>
+              <div>
+                <select
+                  data-testid="music-select"
+                  value={selectedMusic}
+                  onChange={(e) => setSelectedMusic(e.target.value)}
+                  className="brutal-input w-full p-3 font-bold"
+                >
+                  {musicTracks.map((track) => (
+                    <option key={track.id} value={track.url}>
+                      {track.title.toUpperCase()} - {track.genre.toUpperCase()}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
 
-            {/* Video Format Selection */}
-            <Card className="glass border-white/10">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Play className="h-5 w-5 text-primary" />
-                  Video Format
-                </CardTitle>
-                <CardDescription>Choose format for your video</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Select value={videoFormat} onValueChange={setVideoFormat}>
-                  <SelectTrigger data-testid="format-select" className="bg-black/20 border-white/10">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="vertical">Vertical (9:16) - YouTube Shorts, TikTok, Reels</SelectItem>
-                    <SelectItem value="horizontal">Horizontal (16:9) - Standard YouTube</SelectItem>
-                  </SelectContent>
-                </Select>
-              </CardContent>
-            </Card>
+            {/* Video Format */}
+            <div className="brutal-card bg-[#FF6B6B] p-6">
+              <div className="mb-4">
+                <h3 className="text-2xl font-black uppercase flex items-center gap-2">
+                  <Play className="h-6 w-6" />
+                  FORMAT
+                </h3>
+              </div>
+              <div>
+                <select
+                  data-testid="format-select"
+                  value={videoFormat}
+                  onChange={(e) => setVideoFormat(e.target.value)}
+                  className="brutal-input w-full p-3 font-bold"
+                >
+                  <option value="vertical">VERTICAL (9:16) - YOUTUBE SHORTS</option>
+                  <option value="horizontal">HORIZONTAL (16:9) - STANDARD</option>
+                </select>
+              </div>
+            </div>
 
             {/* Subtitle Toggle */}
-            <Card className="glass border-white/10">
-              <CardContent className="pt-6">
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    data-testid="subtitles-toggle"
-                    type="checkbox"
-                    checked={includeSubtitles}
-                    onChange={(e) => setIncludeSubtitles(e.target.checked)}
-                    className="w-5 h-5 rounded border-white/10 text-primary focus:ring-primary"
-                  />
-                  <span className="text-sm font-medium">Include Subtitles</span>
-                </label>
-              </CardContent>
-            </Card>
+            <div className="brutal-card bg-white p-6">
+              <label className="flex items-center gap-4 cursor-pointer">
+                <input
+                  data-testid="subtitles-toggle"
+                  type="checkbox"
+                  checked={includeSubtitles}
+                  onChange={(e) => setIncludeSubtitles(e.target.checked)}
+                  className="w-6 h-6 border-3 border-black"
+                />
+                <span className="text-xl font-black uppercase">INCLUDE SUBTITLES</span>
+              </label>
+            </div>
 
             {/* Generate Button */}
-            <Button
+            <button
               data-testid="generate-button"
               onClick={handleGenerate}
               disabled={isGenerating || !script.trim()}
-              className="w-full h-14 rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-semibold shadow-lg neon-glow"
+              className="brutal-button w-full h-20 bg-black text-white hover:bg-black disabled:opacity-50 disabled:cursor-not-allowed text-2xl"
             >
               {isGenerating ? (
                 <>
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Generating...
+                  <Loader2 className="mr-3 h-7 w-7 animate-spin inline" />
+                  GENERATING...
                 </>
               ) : (
                 <>
-                  <Play className="mr-2 h-5 w-5" />
-                  Generate Video
+                  <Play className="mr-3 h-7 w-7 inline" />
+                  GENERATE VIDEO NOW
                 </>
               )}
-            </Button>
+            </button>
           </motion.div>
 
           {/* Right: Preview Panel */}
