@@ -423,7 +423,8 @@ async def generate_video(request: VideoGenerateRequest, background_tasks: Backgr
         request.script,
         request.music_url,
         request.voice_style,
-        request.include_subtitles
+        request.include_subtitles,
+        request.video_format
     )
     
     return VideoGenerateResponse(
