@@ -411,6 +411,7 @@ async def generate_video(request: VideoGenerateRequest, background_tasks: Backgr
         "music_url": request.music_url,
         "voice_style": request.voice_style,
         "include_subtitles": request.include_subtitles,
+        "video_format": request.video_format,
         "status": "queued",
         "created_at": datetime.now(timezone.utc).isoformat()
     }
