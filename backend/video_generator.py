@@ -343,11 +343,14 @@ async def generate_video_job(job_id: str, script: str, music_url: Optional[str],
         output_path = GENERATED_VIDEOS_DIR / f"{job_id}.mp4"
         video.write_videofile(
             str(output_path),
-            fps=24,
+            fps=30,
             codec='libx264',
             audio_codec='aac',
+            preset='medium',
+            bitrate='5000k',
             temp_audiofile=str(TEMP_MEDIA_DIR / f"{job_id}_temp_audio.m4a"),
-            remove_temp=True
+            remove_temp=True,
+            logger=None  # Suppress moviepy logs
         )
         
         # Cleanup
