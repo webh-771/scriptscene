@@ -100,25 +100,40 @@ def split_script_into_sentences(script: str) -> List[str]:
     return [s.strip() for s in sentences if s.strip()]
 
 def generate_voiceover_elevenlabs(script: str, voice_style: str = "Joanna") -> tuple:
-    """Generate voiceover using gTTS (Google TTS - free)"""
+    """Generate voiceover using ElevenLabs TTS"""
     try:
-        from gtts import gTTS
+        elevenlabs_api_key = os.environ.get('ELEVENLABS_API_KEY', '')
+        if not elevenlabs_api_key:
+            raise Exception("ElevenLabs API key not found in environment")
+        
+        client = ElevenLabs(api_key=elevenlabs_api_key)
         
         audio_id = str(uuid.uuid4())
         audio_path = AUDIO_FILES_DIR / f"{audio_id}.mp3"
         
-        tts = gTTS(text=script, lang='en', slow=False)
-        tts.save(str(audio_path))
+        # Generate audio using ElevenLabs
+        logger.info(f"Generating voiceover with ElevenLabs...")
+        audio_generator = client.text_to_speech.convert(
+            text=script,
+            voice_id="pNInz6obpgDQGcFmaJgB",  # Adam voice (default)
+            model_id="eleven_monolingual_v1"
+        )
         
+        # Write audio to file
+        with open(audio_path, 'wb') as f:
+            for chunk in audio_generator:
+                f.write(chunk)
+        
+        # Get audio duration
         audio_clip = AudioFileClip(str(audio_path))
         duration = audio_clip.duration
         audio_clip.close()
         
-        logger.info(f"gTTS: {duration:.1f}s")
+        logger.info(f"ElevenLabs TTS generated: {duration:.1f}s")
         return str(audio_path), duration
         
     except Exception as e:
-        logger.error(f"TTS error: {str(e)}")
+        logger.error(f"ElevenLabs TTS error: {str(e)}")
         raise
 def generate_subtitles_from_script(script: str, duration: float) -> List[Dict]:
     """Generate subtitle segments with timing"""
