@@ -350,7 +350,7 @@ async def generate_video_job(job_id: str, script: str, music_url: Optional[str],
                     subtitle['text'],
                     subtitle['end'] - subtitle['start'],
                     (video_width, video_height)
-                ).set_start(subtitle['start'])
+                ).with_start(subtitle['start'])
                 subtitle_clips.append(txt_clip)
             
             video = CompositeVideoClip([video] + subtitle_clips)
