@@ -99,16 +99,16 @@ def split_script_into_sentences(script: str) -> List[str]:
     sentences = re.split(r'[.!?]+', script)
     return [s.strip() for s in sentences if s.strip()]
 
-def generate_voiceover_with_puter(script: str, voice_style: str = "Joanna") -> tuple:
+async def generate_voiceover_with_puter(script: str, voice_style: str = "Joanna") -> tuple:
     """Generate voiceover using Puter TTS via headless browser"""
     try:
         # Escape backticks in script
         escaped_script = script.replace('`', '')
         
-        with sync_playwright() as p:
+        async with async_playwright() as p:
             # Launch browser
-            browser = p.chromium.launch(headless=True)
-            page = browser.new_page()
+            browser = await p.chromium.launch(headless=True)
+            page = await browser.new_page()
             
             # Create HTML with Puter TTS
             html_content = f"""
@@ -151,19 +151,19 @@ def generate_voiceover_with_puter(script: str, voice_style: str = "Joanna") -> t
             </html>
             """
             
-            page.set_content(html_content)
+            await page.set_content(html_content)
             
             # Wait for audio generation (max 30 seconds)
             for i in range(60):
-                status = page.locator("#status").text_content()
+                status = await page.locator("#status").text_content()
                 if "Audio generated!" in status:
                     break
                 if "Error" in status:
                     raise Exception(f"Puter TTS error: {status}")
-                time.sleep(0.5)
+                await asyncio.sleep(0.5)
             
             # Get base64 audio data
-            audio_data_b64 = page.locator("#audio-data").text_content()
+            audio_data_b64 = await page.locator("#audio-data").text_content()
             if not audio_data_b64:
                 raise Exception("No audio data generated")
             
@@ -182,7 +182,7 @@ def generate_voiceover_with_puter(script: str, voice_style: str = "Joanna") -> t
             duration = audio_clip.duration
             audio_clip.close()
             
-            browser.close()
+            await browser.close()
             
             logger.info(f"Puter TTS generated: {duration:.1f}s audio")
             return str(audio_path), duration
