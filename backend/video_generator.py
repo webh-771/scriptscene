@@ -99,44 +99,33 @@ def split_script_into_sentences(script: str) -> List[str]:
     sentences = re.split(r'[.!?]+', script)
     return [s.strip() for s in sentences if s.strip()]
 
-def generate_voiceover_simple(script: str, voice_style: str = "Joanna") -> tuple:
-    """Generate voiceover using edge-tts (Microsoft Edge TTS - FREE and works great!)"""
+def generate_voiceover_elevenlabs(script: str, voice_style: str = "Joanna") -> tuple:
+    """Generate voiceover using ElevenLabs"""
     try:
-        import subprocess
+        client = ElevenLabs(api_key="sk_cd68ec48735218d627b91b35f4e96830b853a004536c0748")
         
-        # Use edge-tts which is free, unlimited, and high quality
         audio_id = str(uuid.uuid4())
         audio_path = AUDIO_FILES_DIR / f"{audio_id}.mp3"
         
-        # Map voice styles
-        voice_map = {
-            "Joanna": "en-US-JennyNeural",
-            "Matthew": "en-US-GuyNeural", 
-            "Salli": "en-US-AriaNeural"
-        }
-        voice = voice_map.get(voice_style, "en-US-JennyNeural")
-        
-        # Generate using edge-tts
-        result = subprocess.run(
-            ["edge-tts", "--voice", voice, "--text", script, "--write-media", str(audio_path)],
-            capture_output=True,
-            text=True,
-            timeout=60
+        audio_generator = client.text_to_speech.convert(
+            text=script,
+            voice_id="21m00Tcm4TlvDq8ikWAM",  # Rachel voice
+            model_id="eleven_monolingual_v1"
         )
         
-        if result.returncode != 0:
-            raise Exception(f"edge-tts failed: {result.stderr}")
+        with open(audio_path, 'wb') as f:
+            for chunk in audio_generator:
+                f.write(chunk)
         
-        # Get duration
         audio_clip = AudioFileClip(str(audio_path))
         duration = audio_clip.duration
         audio_clip.close()
         
-        logger.info(f"Edge TTS generated: {duration:.1f}s audio")
+        logger.info(f"ElevenLabs TTS: {duration:.1f}s")
         return str(audio_path), duration
         
     except Exception as e:
-        logger.error(f"TTS error: {str(e)}")
+        logger.error(f"ElevenLabs error: {str(e)}")
         raise
     """Generate voiceover using Puter TTS via headless browser"""
     try:
