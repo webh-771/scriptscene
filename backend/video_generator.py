@@ -176,34 +176,49 @@ def generate_subtitles_from_script(script: str, duration: float) -> List[Dict]:
     return subtitles
 
 def fetch_stock_images(keywords: List[str], count: int = 5) -> List[str]:
-    """Fetch stock images from Pexels or create placeholder images"""
+    """Fetch stock images from Pexels"""
     pexels_api_key = os.environ.get('PEXELS_API_KEY', '')
     
-    if pexels_api_key:
-        # Try Pexels API
-        images = []
-        for keyword in keywords[:count]:
-            try:
-                response = requests.get(
-                    "https://api.pexels.com/v1/search",
-                    headers={"Authorization": pexels_api_key},
-                    params={"query": keyword, "per_page": 1, "orientation": "portrait"},
-                    timeout=10
-                )
-                if response.status_code == 200:
-                    data = response.json()
-                    if data.get('photos'):
-                        images.append(data['photos'][0]['src']['large2x'])
-            except Exception as e:
-                logger.error(f"Pexels API error: {str(e)}")
-                continue
-        
-        if images:
-            return images[:count]
+    if not pexels_api_key:
+        logger.warning("No Pexels API key found, using placeholders")
+        return ["placeholder"] * count
     
-    # Fallback: Create solid color placeholder images with gradients
-    logger.info("Using placeholder images")
-    return ["placeholder"] * count  # Will be generated in video creation
+    # Try Pexels API
+    images = []
+    for keyword in keywords[:count]:
+        try:
+            response = requests.get(
+                "https://api.pexels.com/v1/search",
+                headers={"Authorization": pexels_api_key},
+                params={
+                    "query": keyword, 
+                    "per_page": 1, 
+                    "orientation": "portrait",  # Good for vertical videos
+                    "size": "large"
+                },
+                timeout=10
+            )
+            if response.status_code == 200:
+                data = response.json()
+                if data.get('photos') and len(data['photos']) > 0:
+                    # Use large2x for high quality
+                    images.append(data['photos'][0]['src']['large2x'])
+                    logger.info(f"Fetched Pexels image for keyword: {keyword}")
+                else:
+                    logger.warning(f"No Pexels photos found for: {keyword}")
+            else:
+                logger.error(f"Pexels API error {response.status_code}: {response.text}")
+        except Exception as e:
+            logger.error(f"Pexels API error for keyword '{keyword}': {str(e)}")
+            continue
+    
+    # Fill remaining with placeholders if we didn't get enough
+    while len(images) < count:
+        images.append("placeholder")
+        logger.info(f"Adding placeholder #{len(images)}")
+    
+    logger.info(f"Total images: {len([i for i in images if i != 'placeholder'])} real, {len([i for i in images if i == 'placeholder'])} placeholders")
+    return images[:count]
 
 def extract_keywords_from_script(script: str) -> List[str]:
     """Extract keywords from script for image search"""
