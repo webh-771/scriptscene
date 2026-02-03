@@ -99,7 +99,41 @@ def split_script_into_sentences(script: str) -> List[str]:
     sentences = re.split(r'[.!?]+', script)
     return [s.strip() for s in sentences if s.strip()]
 
-async def generate_voiceover_with_puter(script: str, voice_style: str = "Joanna") -> tuple:
+def generate_voiceover_with_gemini(script: str, voice_style: str = "Puck") -> tuple:
+    """Generate voiceover using Gemini TTS and return audio data with timing info"""
+    try:
+        model = genai.GenerativeModel('gemini-2.0-flash-exp')
+        
+        # Generate audio
+        response = model.generate_content(
+            script,
+            generation_config=genai.GenerationConfig(
+                response_modalities=["AUDIO"],
+                speech_config={"voice_config": {"prebuilt_voice_config": {"voice_name": voice_style}}}
+            )
+        )
+        
+        audio_data = response.parts[0].inline_data.data
+        
+        # Save audio temporarily as MP3
+        audio_id = str(uuid.uuid4())
+        audio_path = AUDIO_FILES_DIR / f"{audio_id}.mp3"
+        
+        # Save directly as MP3
+        with open(str(audio_path), 'wb') as f:
+            f.write(audio_data)
+        
+        # Get duration using moviepy
+        audio_clip = AudioFileClip(str(audio_path))
+        duration = audio_clip.duration
+        audio_clip.close()
+        
+        logger.info(f"Gemini TTS generated: {duration:.1f}s audio")
+        return str(audio_path), duration
+    
+    except Exception as e:
+        logger.error(f"Gemini TTS error: {str(e)}")
+        raise
     """Generate voiceover using Puter TTS via headless browser"""
     try:
         # Escape backticks in script
