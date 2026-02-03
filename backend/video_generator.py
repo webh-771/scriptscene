@@ -335,7 +335,7 @@ async def generate_video_job(job_id: str, script: str, music_url: Optional[str],
         
         # Add audio
         audio_clip = AudioFileClip(audio_path)
-        video = video.set_audio(audio_clip)
+        video = video.with_audio(audio_clip)
         
         jobs_storage[job_id]['progress'] = 70
         jobs_storage[job_id]['message'] = 'Adding subtitles...'
