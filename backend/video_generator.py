@@ -228,7 +228,6 @@ def create_subtitle_clip(subtitle_text: str, duration: float, video_size: tuple)
         subtitle_text,
         fontsize=48,
         color='white',
-        font='Arial-Bold',
         stroke_color='black',
         stroke_width=2,
         method='caption',
