@@ -14,9 +14,12 @@ import google.generativeai as genai
 from moviepy import VideoFileClip, ImageClip, TextClip, CompositeVideoClip, concatenate_videoclips, AudioFileClip, CompositeAudioClip, concatenate_audioclips
 import requests
 from PIL import Image, ImageDraw, ImageFont
+from playwright.sync_api import sync_playwright
 import io
 import wave
 import re
+import base64
+import time
 
 logger = logging.getLogger(__name__)
 video_router = APIRouter()
