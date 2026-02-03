@@ -139,54 +139,52 @@ const VideoGeneratorPage = () => {
             className="space-y-6"
           >
             {/* Script Input */}
-            <Card className="glass border-white/10">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Type className="h-5 w-5 text-primary" />
-                  Your Script
-                </CardTitle>
-                <CardDescription>Write or paste the script for your video</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Textarea
+            <div className="brutal-card bg-[#4ECDC4] p-6">
+              <div className="mb-4">
+                <h3 className="text-2xl font-black uppercase flex items-center gap-2">
+                  <Type className="h-6 w-6" />
+                  YOUR SCRIPT
+                </h3>
+                <p className="text-sm font-bold mt-1">WRITE YOUR VIDEO SCRIPT</p>
+              </div>
+              <div>
+                <textarea
                   data-testid="script-input"
-                  placeholder="Enter your script here... For example: Welcome to our amazing product demo. Today we'll show you how to create stunning videos in minutes. Our AI-powered platform makes video creation simple and fast."
+                  placeholder="Enter your script here... Example: Create viral content now! AI makes video creation super easy and fast!"
                   value={script}
                   onChange={(e) => setScript(e.target.value)}
                   rows={12}
                   maxLength={5000}
-                  className="bg-black/20 border-white/10 focus:border-primary/50 resize-none"
+                  className="brutal-input w-full p-4 resize-none text-black placeholder:text-gray-600"
                 />
-                <div className="mt-2 text-xs text-gray-400">
-                  {script.length} / 5000 characters
+                <div className="mt-2 text-sm font-bold">
+                  {script.length} / 5000 CHARACTERS
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
             {/* Voice Settings */}
-            <Card className="glass border-white/10">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Mic className="h-5 w-5 text-primary" />
-                  Voice Settings
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Voice Style</label>
-                  <Select value={voiceStyle} onValueChange={setVoiceStyle}>
-                    <SelectTrigger data-testid="voice-select" className="bg-black/20 border-white/10">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Puck">Puck (Default)</SelectItem>
-                      <SelectItem value="Charon">Charon (Deep)</SelectItem>
-                      <SelectItem value="Kore">Kore (Alternative)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="brutal-card bg-[#FF6B6B] p-6">
+              <div className="mb-4">
+                <h3 className="text-2xl font-black uppercase flex items-center gap-2">
+                  <Mic className="h-6 w-6" />
+                  VOICE SETTINGS
+                </h3>
+              </div>
+              <div>
+                <label className="text-sm font-black mb-2 block uppercase">Voice Style</label>
+                <select 
+                  data-testid="voice-select"
+                  value={voiceStyle}
+                  onChange={(e) => setVoiceStyle(e.target.value)}
+                  className="brutal-input w-full p-3 font-bold"
+                >
+                  <option value="Joanna">Joanna</option>
+                  <option value="Matthew">Matthew</option>
+                  <option value="Salli">Salli</option>
+                </select>
+              </div>
+            </div>
 
             {/* Music Selection */}
             <Card className="glass border-white/10">
