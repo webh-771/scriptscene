@@ -285,7 +285,7 @@ const VideoGeneratorPage = () => {
               </CardHeader>
               <CardContent>
                 {/* Video Player */}
-                <div className="video-container mb-6">
+                <div className={`${videoFormat === 'vertical' ? 'aspect-[9/16] max-w-md mx-auto' : 'aspect-video'} bg-black rounded-lg overflow-hidden mb-6`}>
                   {videoUrl ? (
                     <video
                       data-testid="video-player"
@@ -298,6 +298,9 @@ const VideoGeneratorPage = () => {
                       <div className="text-center text-gray-500">
                         <Play className="h-16 w-16 mx-auto mb-4 opacity-50" />
                         <p>Video preview will appear here</p>
+                        <p className="text-sm mt-2">
+                          Format: {videoFormat === 'vertical' ? 'Vertical (9:16)' : 'Horizontal (16:9)'}
+                        </p>
                       </div>
                     </div>
                   )}
