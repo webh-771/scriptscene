@@ -155,38 +155,34 @@ def generate_subtitles_from_script(script: str, duration: float) -> List[Dict]:
     return subtitles
 
 def fetch_stock_images(keywords: List[str], count: int = 5) -> List[str]:
-    """Fetch stock images from Pexels"""
+    """Fetch stock images from Pexels or create placeholder images"""
     pexels_api_key = os.environ.get('PEXELS_API_KEY', '')
     
-    if not pexels_api_key:
-        # Use Unsplash as fallback (no API key needed for basic usage)
+    if pexels_api_key:
+        # Try Pexels API
         images = []
         for keyword in keywords[:count]:
             try:
-                url = f"https://source.unsplash.com/1920x1080/?{keyword.replace(' ', ',')}"
-                images.append(url)
-            except:
+                response = requests.get(
+                    f"https://api.pexels.com/v1/search",
+                    headers={"Authorization": pexels_api_key},
+                    params={"query": keyword, "per_page": 1, "orientation": "portrait"},
+                    timeout=10
+                )
+                if response.status_code == 200:
+                    data = response.json()
+                    if data.get('photos'):
+                        images.append(data['photos'][0]['src']['large2x'])
+            except Exception as e:
+                logger.error(f"Pexels API error: {str(e)}")
                 continue
-        return images[:count]
+        
+        if images:
+            return images[:count]
     
-    # Pexels implementation
-    images = []
-    for keyword in keywords[:count]:
-        try:
-            response = requests.get(
-                f"https://api.pexels.com/v1/search",
-                headers={"Authorization": pexels_api_key},
-                params={"query": keyword, "per_page": 1, "orientation": "landscape"}
-            )
-            if response.status_code == 200:
-                data = response.json()
-                if data.get('photos'):
-                    images.append(data['photos'][0]['src']['large'])
-        except Exception as e:
-            logger.error(f"Pexels API error: {str(e)}")
-            continue
-    
-    return images
+    # Fallback: Create solid color placeholder images with gradients
+    logger.info("Using placeholder images")
+    return ["placeholder"] * count  # Will be generated in video creation
 
 def extract_keywords_from_script(script: str) -> List[str]:
     """Extract keywords from script for image search"""
