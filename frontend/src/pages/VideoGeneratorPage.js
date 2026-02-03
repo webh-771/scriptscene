@@ -93,7 +93,8 @@ const VideoGeneratorPage = () => {
         script: script,
         music_url: selectedMusic,
         voice_style: voiceStyle,
-        include_subtitles: includeSubtitles
+        include_subtitles: includeSubtitles,
+        video_format: videoFormat
       });
 
       setJobId(response.data.job_id);
