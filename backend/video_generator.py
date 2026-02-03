@@ -377,7 +377,7 @@ async def generate_video_job(job_id: str, script: str, music_url: Optional[str],
                 
                 # Mix audio
                 final_audio = CompositeAudioClip([video.audio, music_clip])
-                video = video.set_audio(final_audio)
+                video = video.with_audio(final_audio)
             except Exception as e:
                 logger.error(f"Failed to add music: {str(e)}")
         
