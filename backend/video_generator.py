@@ -100,41 +100,25 @@ def split_script_into_sentences(script: str) -> List[str]:
     return [s.strip() for s in sentences if s.strip()]
 
 def generate_voiceover_elevenlabs(script: str, voice_style: str = "Joanna") -> tuple:
-    """Generate voiceover using ElevenLabs"""
+    """Generate voiceover using gTTS (Google TTS - free)"""
     try:
-        import requests
+        from gtts import gTTS
         
         audio_id = str(uuid.uuid4())
         audio_path = AUDIO_FILES_DIR / f"{audio_id}.mp3"
         
-        url = "https://api.elevenlabs.io/v1/text-to-speech/21m00Tcm4TlvDq8ikWAM"
-        headers = {
-            "xi-api-key": "sk_cd68ec48735218d627b91b35f4e96830b853a004536c0748",
-            "Content-Type": "application/json"
-        }
-        data = {
-            "text": script,
-            "model_id": "eleven_multilingual_v2"
-        }
-        
-        response = requests.post(url, json=data, headers=headers, stream=True)
-        
-        if response.status_code != 200:
-            raise Exception(f"ElevenLabs error: {response.status_code} - {response.text}")
-        
-        with open(audio_path, 'wb') as f:
-            for chunk in response.iter_content(chunk_size=1024):
-                f.write(chunk)
+        tts = gTTS(text=script, lang='en', slow=False)
+        tts.save(str(audio_path))
         
         audio_clip = AudioFileClip(str(audio_path))
         duration = audio_clip.duration
         audio_clip.close()
         
-        logger.info(f"ElevenLabs TTS: {duration:.1f}s")
+        logger.info(f"gTTS: {duration:.1f}s")
         return str(audio_path), duration
         
     except Exception as e:
-        logger.error(f"ElevenLabs error: {str(e)}")
+        logger.error(f"TTS error: {str(e)}")
         raise
 def generate_subtitles_from_script(script: str, duration: float) -> List[Dict]:
     """Generate subtitle segments with timing"""
