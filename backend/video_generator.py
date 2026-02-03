@@ -45,6 +45,7 @@ class VideoGenerateRequest(BaseModel):
     voice_style: str = Field(default="Puck")
     include_subtitles: bool = True
     video_duration: Optional[int] = None
+    video_format: str = Field(default="vertical")  # "vertical" (9:16) or "horizontal" (16:9)
 
 class VideoGenerateResponse(BaseModel):
     job_id: str
