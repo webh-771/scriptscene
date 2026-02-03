@@ -211,9 +211,15 @@ def create_subtitle_clip(subtitle_text: str, duration: float, video_size: tuple)
         align='center'
     ).set_duration(duration).set_position(('center', 0.85), relative=True)
 
-async def generate_video_job(job_id: str, script: str, music_url: Optional[str], voice_style: str, include_subtitles: bool):
+async def generate_video_job(job_id: str, script: str, music_url: Optional[str], voice_style: str, include_subtitles: bool, video_format: str = "vertical"):
     """Background task to generate video"""
     try:
+        # Set video dimensions based on format
+        if video_format == "vertical":
+            video_width, video_height = 1080, 1920  # 9:16 for YouTube Shorts
+        else:
+            video_width, video_height = 1920, 1080  # 16:9 for standard
+        
         # Update status
         jobs_storage[job_id]['status'] = 'processing'
         jobs_storage[job_id]['progress'] = 10
@@ -248,12 +254,36 @@ async def generate_video_job(job_id: str, script: str, music_url: Optional[str],
         if not image_clips:
             raise Exception("Failed to fetch any images")
         
-        # Create video from images
+        # Create video from images with proper aspect ratio
         clips = []
         clip_duration = audio_duration / len(image_clips)
         
         for img_path in image_clips:
-            clip = ImageClip(img_path).set_duration(clip_duration).resize((1920, 1080))
+            # Load image and resize to cover the frame (crop to fit)
+            clip = ImageClip(img_path).set_duration(clip_duration)
+            
+            # Calculate resize to cover (crop center)
+            img_aspect = clip.w / clip.h
+            target_aspect = video_width / video_height
+            
+            if img_aspect > target_aspect:
+                # Image is wider, fit height and crop width
+                new_height = video_height
+                new_width = int(new_height * img_aspect)
+                clip = clip.resize(height=new_height)
+            else:
+                # Image is taller, fit width and crop height
+                new_width = video_width
+                new_height = int(new_width / img_aspect)
+                clip = clip.resize(width=new_width)
+            
+            # Crop to exact size from center
+            clip = clip.crop(
+                x_center=clip.w/2, 
+                y_center=clip.h/2, 
+                width=video_width, 
+                height=video_height
+            )
             clips.append(clip)
         
         video = concatenate_videoclips(clips, method="compose")
