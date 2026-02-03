@@ -102,6 +102,9 @@ def split_script_into_sentences(script: str) -> List[str]:
 def generate_voiceover_with_puter(script: str, voice_style: str = "Joanna") -> tuple:
     """Generate voiceover using Puter TTS via headless browser"""
     try:
+        # Escape backticks in script
+        escaped_script = script.replace('`', '')
+        
         with sync_playwright() as p:
             # Launch browser
             browser = p.chromium.launch(headless=True)
@@ -119,7 +122,7 @@ def generate_voiceover_with_puter(script: str, voice_style: str = "Joanna") -> t
                 <script>
                     async function generateAudio() {{
                         try {{
-                            const audio = await puter.ai.txt2speech(`{script.replace('`', '\\`')}`, {{
+                            const audio = await puter.ai.txt2speech(`{escaped_script}`, {{
                                 voice: "{voice_style}",
                                 engine: "neural"
                             }});
