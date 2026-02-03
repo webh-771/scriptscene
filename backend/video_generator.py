@@ -402,7 +402,7 @@ async def generate_video_job(job_id: str, script: str, music_url: Optional[str],
         for img_path in image_clips:
             try:
                 os.remove(img_path)
-            except:
+            except Exception:
                 pass
         
         # Update job status
