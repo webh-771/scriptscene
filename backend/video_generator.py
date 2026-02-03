@@ -10,7 +10,7 @@ import asyncio
 from motor.motor_asyncio import AsyncIOMotorClient
 import json
 import google.generativeai as genai
-from moviepy import *
+from moviepy import VideoFileClip, ImageClip, TextClip, CompositeVideoClip, concatenate_videoclips, AudioFileClip, CompositeAudioClip, concatenate_audioclips
 import requests
 from PIL import Image, ImageDraw, ImageFont
 import io
