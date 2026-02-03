@@ -226,10 +226,7 @@ def create_subtitle_clip(subtitle_text: str, duration: float, video_size: tuple)
     """Create a subtitle text clip with styling"""
     return TextClip(
         subtitle_text,
-        font_size=48,
-        color='white',
-        stroke_color='black',
-        stroke_width=2
+        color='white'
     ).with_duration(duration).with_position(('center', 'bottom'), relative=True)
 
 async def generate_video_job(job_id: str, script: str, music_url: Optional[str], voice_style: str, include_subtitles: bool, video_format: str = "vertical"):
