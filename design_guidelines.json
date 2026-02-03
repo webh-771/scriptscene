@@ -1,0 +1,133 @@
+{
+  "identity": {
+    "name": "E1",
+    "archetype": "The Performance Pro (Dark Mode Specialist)",
+    "vibe": "Cinematic, Precision, Electric",
+    "principles": [
+      "Fusion over Imitation",
+      "Emotion First",
+      "Content is King",
+      "Zoom In",
+      "Negative Space",
+      "Contrast"
+    ]
+  },
+  "typography": {
+    "font_family": {
+      "headings": "Space Grotesk, sans-serif",
+      "body": "Manrope, sans-serif",
+      "mono": "JetBrains Mono, monospace"
+    },
+    "google_fonts_url": "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400&display=swap",
+    "usage_rules": {
+      "headings": "Use Space Grotesk for all H1-H3. Tracking tight (-0.02em). Weight 600 or 700 for impact.",
+      "body": "Use Manrope for all UI text. High legibility. Weight 400 for body, 500 for labels.",
+      "buttons": "Manrope, Weight 600, Uppercase tracking-wide for primary actions."
+    }
+  },
+  "colors": {
+    "theme_strategy": "Dark Mode Default (The Performance Pro)",
+    "palette": {
+      "background": "#050505",
+      "foreground": "#EDEDED",
+      "primary": "#6366F1",
+      "primary_foreground": "#FFFFFF",
+      "secondary": "#1A1A1A",
+      "accent": "#8B5CF6",
+      "muted": "#262626",
+      "border": "#333333"
+    },
+    "tailwind_variables": {
+      "root": {
+        "--background": "0 0% 100%",
+        "--foreground": "240 10% 3.9%",
+        "--primary": "240 5.9% 10%",
+        "--primary-foreground": "0 0% 98%",
+        "--radius": "0.5rem"
+      },
+      "dark": {
+        "--background": "240 10% 3.9%",
+        "--foreground": "0 0% 98%",
+        "--card": "240 10% 3.9%",
+        "--card-foreground": "0 0% 98%",
+        "--popover": "240 10% 3.9%",
+        "--popover-foreground": "0 0% 98%",
+        "--primary": "263.4 70% 50.4%",
+        "--primary-foreground": "210 40% 98%",
+        "--secondary": "240 3.7% 15.9%",
+        "--secondary-foreground": "0 0% 98%",
+        "--muted": "240 3.7% 15.9%",
+        "--muted-foreground": "240 5% 64.9%",
+        "--accent": "240 3.7% 15.9%",
+        "--accent-foreground": "0 0% 98%",
+        "--destructive": "0 62.8% 30.6%",
+        "--destructive-foreground": "0 0% 98%",
+        "--border": "240 3.7% 15.9%",
+        "--input": "240 3.7% 15.9%",
+        "--ring": "240 4.9% 83.9%"
+      }
+    }
+  },
+  "visual_enhancers": {
+    "glassmorphism": "bg-black/40 backdrop-blur-xl border-white/10",
+    "neon_glow": "shadow-[0_0_20px_rgba(99,102,241,0.3)]",
+    "gradients": {
+      "hero_text": "bg-clip-text text-transparent bg-gradient-to-r from-white via-white to-white/50",
+      "primary_button": "bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500"
+    },
+    "borders": "border border-white/10"
+  },
+  "layout_strategies": {
+    "general": "Use 'Bento' grids. Avoid simple columns. Use generous padding (p-8, p-12).",
+    "hero_section": "Mode A: Tetris Grid. Large abstract visual (col-span-8), punchy headline (col-span-4).",
+    "dashboard": "Mode B: High Density. Sidebar navigation. Main content area with glassmorphic panels.",
+    "video_generator": "Split view: Script Input (Left, 40%) vs Preview/Settings (Right, 60%). Sticky preview."
+  },
+  "components": {
+    "buttons": {
+      "primary": "h-12 px-8 rounded-full bg-primary text-white font-semibold shadow-lg hover:shadow-primary/25 transition-all",
+      "secondary": "h-12 px-8 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-all"
+    },
+    "cards": {
+      "style": "bg-card/50 backdrop-blur-sm border border-white/5 rounded-xl p-6 hover:border-primary/50 transition-colors duration-300"
+    },
+    "inputs": {
+      "style": "bg-black/20 border-white/10 focus:border-primary/50 focus:ring-primary/20 h-12 rounded-lg"
+    }
+  },
+  "image_urls": {
+    "hero_background": {
+      "url": "https://images.unsplash.com/photo-1762281429507-a0384348f4b1?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2OTV8MHwxfHNlYXJjaHwyfHxhYnN0cmFjdCUyMGRpZ2l0YWwlMjBzb3VuZCUyMHdhdmUlMjBkYXJrJTIwYmFja2dyb3VuZHxlbnwwfHx8fDE3NzAxMjk4MDN8MA&ixlib=rb-4.1.0&q=85",
+      "description": "Abstract blue wavy lines on black background",
+      "category": "hero"
+    },
+    "feature_creator": {
+      "url": "https://images.unsplash.com/photo-1673093774005-a5ee94ed98c4?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMjV8MHwxfHNlYXJjaHwxfHxjb250ZW50JTIwY3JlYXRvciUyMGhvbGRpbmclMjBwaG9uZSUyMGhhcHB5fGVufDB8fHx8MTc3MDEyOTgwN3ww&ixlib=rb-4.1.0&q=85",
+      "description": "Man with beard holding cell phone",
+      "category": "feature"
+    },
+    "studio_vibe": {
+      "url": "https://images.unsplash.com/photo-1686061593141-dae839ea67e7?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxOTJ8MHwxfHNlYXJjaHwzfHxmaWxtbWFrZXIlMjBjYW1lcmElMjBzdHVkaW8lMjBuZW9ufGVufDB8fHx8MTc3MDEyOTc5OXww&ixlib=rb-4.1.0&q=85",
+      "description": "Low key neon lighting setup",
+      "category": "background"
+    }
+  },
+  "instructions_to_main_agent": [
+    "1. INSTALL FONTS: Add the Google Fonts link to public/index.html immediately.",
+    "2. CONFIGURE TAILWIND: Update tailwind.config.js to use the 'Space Grotesk' and 'Manrope' font families.",
+    "3. SET THEME: Update src/index.css with the provided CSS variables for the Dark Mode 'Performance Pro' theme.",
+    "4. USE SHADCN: Use the existing components in src/components/ui but style them using the 'visual_enhancers' rules (glassmorphism, borders).",
+    "5. LAYOUT: Implement the 'Video Generator' page with a split-screen layout (Script vs Preview).",
+    "6. IMAGES: Use the provided image URLs for the Landing Page and placeholders.",
+    "7. ANIMATION: Add 'framer-motion' for smooth transitions between steps (Script -> Voice -> Media -> Preview).",
+    "8. CRITICAL: Ensure all text has high contrast against the dark background. Use text-gray-400 for secondary text, text-white for primary."
+  ],
+  "universal_guidelines": [
+    "Do not use generic centered layouts.",
+    "Create depth through layered design elements with z-index hierarchy.",
+    "Use glass-morphism effects with backdrop filters (12-24px blur).",
+    "Every interaction needs micro-animations.",
+    "Use 2-3x more spacing than feels comfortable.",
+    "All interactive elements MUST include data-testid attribute."
+  ]
+}
