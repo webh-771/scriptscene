@@ -66,7 +66,7 @@ for directory in [GENERATED_VIDEOS_DIR, AUDIO_FILES_DIR, TEMP_MEDIA_DIR]:
 class VideoGenerateRequest(BaseModel):
     script: str = Field(..., min_length=10, max_length=5000)
     music_url: Optional[str] = None
-    voice_style: str = Field(default="Puck")
+    voice_style: str = Field(default="Joanna")
     include_subtitles: bool = True
     video_duration: Optional[int] = None
     video_format: str = Field(default="vertical")  # "vertical" (9:16) or "horizontal" (16:9)
