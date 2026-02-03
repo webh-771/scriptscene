@@ -213,6 +213,28 @@ const VideoGeneratorPage = () => {
               </CardContent>
             </Card>
 
+            {/* Video Format Selection */}
+            <Card className="glass border-white/10">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Play className="h-5 w-5 text-primary" />
+                  Video Format
+                </CardTitle>
+                <CardDescription>Choose format for your video</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Select value={videoFormat} onValueChange={setVideoFormat}>
+                  <SelectTrigger data-testid="format-select" className="bg-black/20 border-white/10">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="vertical">Vertical (9:16) - YouTube Shorts, TikTok, Reels</SelectItem>
+                    <SelectItem value="horizontal">Horizontal (16:9) - Standard YouTube</SelectItem>
+                  </SelectContent>
+                </Select>
+              </CardContent>
+            </Card>
+
             {/* Subtitle Toggle */}
             <Card className="glass border-white/10">
               <CardContent className="pt-6">
