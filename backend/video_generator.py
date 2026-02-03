@@ -341,9 +341,18 @@ async def generate_video_job(job_id: str, script: str, music_url: Optional[str],
         jobs_storage[job_id]['progress'] = 30
         jobs_storage[job_id]['message'] = 'Fetching stock media...'
         
-        # Extract keywords and fetch images
+        # Extract keywords and fetch images - MANY images for engagement (1 per second)
         keywords = extract_keywords_from_script(script)
-        image_urls = fetch_stock_images(keywords, count=5)
+        # Calculate how many images we need (1 image per second minimum, more for shorter durations)
+        images_needed = max(int(audio_duration) + 5, 15)  # At least 15 images
+        
+        # Expand keywords by repeating them to get more variety
+        expanded_keywords = []
+        while len(expanded_keywords) < images_needed:
+            expanded_keywords.extend(keywords)
+        
+        image_urls = fetch_stock_images(expanded_keywords[:images_needed], count=images_needed)
+        logger.info(f"Fetching {images_needed} images for {audio_duration:.1f}s video")
         
         jobs_storage[job_id]['progress'] = 50
         jobs_storage[job_id]['message'] = 'Creating video...'
