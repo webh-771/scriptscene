@@ -99,40 +99,44 @@ def split_script_into_sentences(script: str) -> List[str]:
     sentences = re.split(r'[.!?]+', script)
     return [s.strip() for s in sentences if s.strip()]
 
-def generate_voiceover_with_gemini(script: str, voice_style: str = "Puck") -> tuple:
-    """Generate voiceover using Gemini TTS and return audio data with timing info"""
+def generate_voiceover_simple(script: str, voice_style: str = "Joanna") -> tuple:
+    """Generate voiceover using edge-tts (Microsoft Edge TTS - FREE and works great!)"""
     try:
-        model = genai.GenerativeModel('gemini-2.0-flash-exp')
+        import subprocess
         
-        # Generate audio
-        response = model.generate_content(
-            script,
-            generation_config=genai.GenerationConfig(
-                response_modalities=["AUDIO"],
-                speech_config={"voice_config": {"prebuilt_voice_config": {"voice_name": voice_style}}}
-            )
-        )
-        
-        audio_data = response.parts[0].inline_data.data
-        
-        # Save audio temporarily as MP3
+        # Use edge-tts which is free, unlimited, and high quality
         audio_id = str(uuid.uuid4())
         audio_path = AUDIO_FILES_DIR / f"{audio_id}.mp3"
         
-        # Save directly as MP3
-        with open(str(audio_path), 'wb') as f:
-            f.write(audio_data)
+        # Map voice styles
+        voice_map = {
+            "Joanna": "en-US-JennyNeural",
+            "Matthew": "en-US-GuyNeural", 
+            "Salli": "en-US-AriaNeural"
+        }
+        voice = voice_map.get(voice_style, "en-US-JennyNeural")
         
-        # Get duration using moviepy
+        # Generate using edge-tts
+        result = subprocess.run(
+            ["edge-tts", "--voice", voice, "--text", script, "--write-media", str(audio_path)],
+            capture_output=True,
+            text=True,
+            timeout=60
+        )
+        
+        if result.returncode != 0:
+            raise Exception(f"edge-tts failed: {result.stderr}")
+        
+        # Get duration
         audio_clip = AudioFileClip(str(audio_path))
         duration = audio_clip.duration
         audio_clip.close()
         
-        logger.info(f"Gemini TTS generated: {duration:.1f}s audio")
+        logger.info(f"Edge TTS generated: {duration:.1f}s audio")
         return str(audio_path), duration
-    
+        
     except Exception as e:
-        logger.error(f"Gemini TTS error: {str(e)}")
+        logger.error(f"TTS error: {str(e)}")
         raise
     """Generate voiceover using Puter TTS via headless browser"""
     try:
