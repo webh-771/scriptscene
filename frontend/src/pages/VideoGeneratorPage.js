@@ -38,6 +38,7 @@ const VideoGeneratorPage = () => {
       }, 2000);
       return () => clearInterval(interval);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jobId, isGenerating]);
 
   const fetchMusicTracks = async () => {
@@ -56,7 +57,7 @@ const VideoGeneratorPage = () => {
     try {
       const response = await axios.get(`${API}/video/status/${jobId}`);
       const status = response.data;
-      
+
       setProgress(status.progress);
       setStatusMessage(status.message);
 
@@ -173,7 +174,7 @@ const VideoGeneratorPage = () => {
               </div>
               <div>
                 <label className="text-sm font-black mb-2 block uppercase">Voice Style</label>
-                <select 
+                <select
                   data-testid="voice-select"
                   value={voiceStyle}
                   onChange={(e) => setVoiceStyle(e.target.value)}
@@ -304,7 +305,7 @@ const VideoGeneratorPage = () => {
                 {isGenerating && (
                   <div data-testid="progress-container" className="space-y-3 brutal-card bg-[#FFE66D] p-4">
                     <div className="w-full bg-white border-3 border-black h-8 relative overflow-hidden">
-                      <div 
+                      <div
                         className="h-full bg-black transition-all duration-300"
                         style={{ width: `${progress}%` }}
                       />
