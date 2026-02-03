@@ -344,6 +344,8 @@ const VideoGeneratorPage = () => {
                   <li>• Scripts between 100-500 words work best</li>
                   <li>• Video generation takes 1-3 minutes</li>
                   <li>• Choose music that matches your content tone</li>
+                  <li>• Vertical format is perfect for Shorts, TikTok, Reels</li>
+                  <li>• Horizontal format for standard YouTube videos</li>
                 </ul>
               </CardContent>
             </Card>
