@@ -304,7 +304,7 @@ async def generate_video_job(job_id: str, script: str, music_url: Optional[str],
                 txt_clip = create_subtitle_clip(
                     subtitle['text'],
                     subtitle['end'] - subtitle['start'],
-                    (1920, 1080)
+                    (video_width, video_height)
                 ).set_start(subtitle['start'])
                 subtitle_clips.append(txt_clip)
             
