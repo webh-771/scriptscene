@@ -19,6 +19,7 @@ const VideoGeneratorPage = () => {
   const [voiceStyle, setVoiceStyle] = useState('Puck');
   const [selectedMusic, setSelectedMusic] = useState('');
   const [includeSubtitles, setIncludeSubtitles] = useState(true);
+  const [videoFormat, setVideoFormat] = useState('vertical');
   const [musicTracks, setMusicTracks] = useState([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [jobId, setJobId] = useState(null);
