@@ -114,19 +114,18 @@ const VideoGeneratorPage = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b border-white/10 bg-black/40 backdrop-blur-xl">
+      <header className="border-b-4 border-black bg-[#FFE66D]">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <Button
             data-testid="back-button"
-            variant="ghost"
             onClick={() => navigate('/')}
-            className="flex items-center gap-2"
+            className="brutal-button bg-white text-black hover:bg-white px-6"
           >
-            <ArrowLeft className="h-4 w-4" />
-            Back
+            <ArrowLeft className="h-5 w-5 mr-2" />
+            BACK
           </Button>
-          <h1 className="text-2xl font-heading font-bold">Video Generator</h1>
-          <div className="w-20" />
+          <h1 className="text-3xl font-black uppercase">VIDEO GENERATOR</h1>
+          <div className="w-28" />
         </div>
       </header>
 
