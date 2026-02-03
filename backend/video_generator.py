@@ -12,6 +12,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 import json
 import google.generativeai as genai
 from moviepy import VideoFileClip, ImageClip, TextClip, CompositeVideoClip, concatenate_videoclips, AudioFileClip, CompositeAudioClip, concatenate_audioclips
+from moviepy.audio import fx as afx
 import requests
 from PIL import Image, ImageDraw, ImageFont
 from elevenlabs import ElevenLabs
@@ -24,10 +25,17 @@ import time
 logger = logging.getLogger(__name__)
 video_router = APIRouter()
 
-# MongoDB connection
-mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+# MongoDB connection (optional)
+try:
+    mongo_url = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
+    client = AsyncIOMotorClient(mongo_url, serverSelectionTimeoutMS=2000)
+    client.admin.command('ping')
+    db = client[os.environ.get('DB_NAME', 'scriptscene')]
+    logger.info("MongoDB connected in video_generator")
+except Exception as e:
+    logger.warning(f"MongoDB not available in video_generator: {e}")
+    client = None
+    db = None
 
 # Configure Gemini
 gemini_api_key = os.environ.get('GEMINI_API_KEY', '')
@@ -116,7 +124,7 @@ def generate_voiceover_elevenlabs(script: str, voice_style: str = "Joanna") -> t
         audio_generator = client.text_to_speech.convert(
             text=script,
             voice_id="pNInz6obpgDQGcFmaJgB",  # Adam voice (default)
-            model_id="eleven_monolingual_v1"
+            model_id="eleven_turbo_v2_5"  # Updated to free tier compatible model
         )
         
         # Write audio to file
@@ -157,82 +165,115 @@ def generate_subtitles_from_script(script: str, duration: float) -> List[Dict]:
     return subtitles
 
 def fetch_stock_images(keywords: List[str], count: int = 5) -> List[str]:
-    """Fetch stock images from Pexels"""
+    """Fetch attention-grabbing stock images from Pexels"""
     pexels_api_key = os.environ.get('PEXELS_API_KEY', '')
     
     if not pexels_api_key:
         logger.warning("No Pexels API key found, using placeholders")
         return ["placeholder"] * count
     
-    # Try Pexels API
+    # Try Pexels API with improved search
     images = []
     for keyword in keywords[:count]:
         try:
+            # Search with multiple results to pick the best one
             response = requests.get(
                 "https://api.pexels.com/v1/search",
                 headers={"Authorization": pexels_api_key},
                 params={
                     "query": keyword, 
-                    "per_page": 1, 
-                    "orientation": "portrait",  # Good for vertical videos
-                    "size": "large"
+                    "per_page": 3,  # Get top 3 to pick the most engaging
+                    "orientation": "portrait",
+                    "size": "large",
+                    "color": "vibrant"  # Prefer colorful, eye-catching images
                 },
                 timeout=10
             )
             if response.status_code == 200:
                 data = response.json()
                 if data.get('photos') and len(data['photos']) > 0:
-                    # Use large2x for high quality
-                    images.append(data['photos'][0]['src']['large2x'])
-                    logger.info(f"Fetched Pexels image for keyword: {keyword}")
+                    # Pick the first photo (Pexels sorts by popularity/relevance)
+                    # Use original for highest quality
+                    best_photo = data['photos'][0]
+                    images.append(best_photo['src']['large2x'])
+                    logger.info(f"Fetched engaging image for: '{keyword}' (photographer: {best_photo.get('photographer', 'unknown')})") 
                 else:
                     logger.warning(f"No Pexels photos found for: {keyword}")
+                    # Try a simpler search without the keyword
+                    images.append("placeholder")
             else:
                 logger.error(f"Pexels API error {response.status_code}: {response.text}")
+                images.append("placeholder")
         except Exception as e:
             logger.error(f"Pexels API error for keyword '{keyword}': {str(e)}")
-            continue
+            images.append("placeholder")
     
     # Fill remaining with placeholders if we didn't get enough
     while len(images) < count:
         images.append("placeholder")
-        logger.info(f"Adding placeholder #{len(images)}")
     
-    logger.info(f"Total images: {len([i for i in images if i != 'placeholder'])} real, {len([i for i in images if i == 'placeholder'])} placeholders")
+    real_count = len([i for i in images if i != 'placeholder'])
+    logger.info(f"Fetched {real_count}/{count} real images, {count - real_count} placeholders")
     return images[:count]
 
 def extract_keywords_from_script(script: str) -> List[str]:
-    """Extract meaningful keywords from script for image search"""
-    # Split into words and clean
-    words = re.findall(r'\b\w+\b', script.lower())
+    """Extract meaningful, contextual keywords from script for image search"""
+    # Split into sentences to maintain context
+    sentences = re.split(r'[.!?]+', script)
     
-    # Remove common stop words
+    # Enhanced stop words list
     stop_words = {
         'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 
         'of', 'with', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
         'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'should',
         'can', 'could', 'may', 'might', 'must', 'this', 'that', 'these', 'those',
-        'your', 'our', 'just', 'now', 'get', 'make', 'take', 'use', 'see', 'know'
+        'your', 'our', 'just', 'now', 'get', 'make', 'take', 'use', 'see', 'know',
+        'very', 'more', 'most', 'also', 'here', 'there', 'when', 'where', 'what'
     }
     
-    # Filter words: keep only meaningful words (length > 4, not stop words)
-    keywords = [w for w in words if w not in stop_words and len(w) > 4]
+    # Extract keywords from each sentence for better context
+    all_keywords = []
+    for sentence in sentences:
+        if not sentence.strip():
+            continue
+        
+        words = re.findall(r'\b\w+\b', sentence.lower())
+        # Get nouns, verbs, adjectives (words > 3 chars)
+        meaningful = [w for w in words if w not in stop_words and len(w) > 3]
+        
+        # Take top 2-3 words per sentence for variety
+        all_keywords.extend(meaningful[:3])
     
     # Remove duplicates while preserving order
     seen = set()
     unique_keywords = []
-    for kw in keywords:
+    for kw in all_keywords:
         if kw not in seen:
             seen.add(kw)
             unique_keywords.append(kw)
     
-    # If we don't have enough keywords, add some generic ones
-    if len(unique_keywords) < 3:
-        generic_keywords = ['technology', 'business', 'modern', 'creative', 'success']
-        unique_keywords.extend(generic_keywords[:5 - len(unique_keywords)])
+    # Add engaging visual modifiers to make images more attention-grabbing
+    enhanced_keywords = []
+    visual_enhancers = ['vibrant', 'dynamic', 'stunning', 'powerful', 'dramatic']
     
-    logger.info(f"Extracted keywords: {unique_keywords[:5]}")
-    return unique_keywords[:5]
+    for i, kw in enumerate(unique_keywords):
+        # Every few keywords, add a visual enhancer for more engaging images
+        if i % 3 == 0 and i < len(visual_enhancers):
+            enhanced_keywords.append(f"{visual_enhancers[i % len(visual_enhancers)]} {kw}")
+        else:
+            enhanced_keywords.append(kw)
+    
+    # If we don't have enough, add engaging generic keywords
+    if len(enhanced_keywords) < 8:
+        engaging_keywords = [
+            'stunning technology', 'dynamic business', 'vibrant innovation',
+            'powerful success', 'creative future', 'dramatic growth',
+            'modern lifestyle', 'inspiring achievement'
+        ]
+        enhanced_keywords.extend(engaging_keywords[:12 - len(enhanced_keywords)])
+    
+    logger.info(f"Extracted {len(enhanced_keywords)} contextual keywords: {enhanced_keywords[:5]}...")
+    return enhanced_keywords
 
 def create_placeholder_image(width: int, height: int, color: tuple, text: str = "") -> str:
     """Create a solid color placeholder image with optional text"""
@@ -262,11 +303,34 @@ def create_placeholder_image(width: int, height: int, color: tuple, text: str = 
     img.save(img_path, 'JPEG', quality=85)
     return str(img_path)
 
-def create_subtitle_clip(subtitle_text: str, duration: float, video_size: tuple) -> TextClip:
-    """Create a subtitle text clip with styling"""
-    # Simplified subtitle - just use text without TextClip complications
-    # For now, skip subtitles to get video generation working
-    return None
+def create_subtitle_clip(subtitle_text: str, duration: float, video_size: tuple):
+    """Create a subtitle text clip with styling - centered, smaller text"""
+    try:
+        from moviepy.video.VideoClip import TextClip
+        
+        # Use the Montserrat font with absolute path
+        font_path = str(ROOT_DIR / "font" / "Montserrat-ExtraBold.ttf")
+        
+        # Create text clip - smaller font, centered position
+        txt_clip = TextClip(
+            text=subtitle_text,
+            font=font_path,
+            font_size=50,  # Smaller text
+            color='white',
+            stroke_color='black',  # Black outline for readability
+            stroke_width=2,
+            method='caption',
+            size=(video_size[0] - 150, None)  # Width for text wrapping
+        )
+        
+        # Position in CENTER of screen
+        txt_clip = txt_clip.with_duration(duration).with_position('center')
+        
+        return txt_clip
+    except Exception as e:
+        logger.warning(f"TextClip creation failed: {e}. Skipping subtitles.")
+        return None
+
 
 async def generate_video_job(job_id: str, script: str, music_url: Optional[str], voice_style: str, include_subtitles: bool, video_format: str = "vertical"):
     """Background task to generate video"""
@@ -287,18 +351,20 @@ async def generate_video_job(job_id: str, script: str, music_url: Optional[str],
         jobs_storage[job_id]['progress'] = 30
         jobs_storage[job_id]['message'] = 'Fetching stock media...'
         
-        # Extract keywords and fetch images - MANY images for engagement (1 per second)
+        # Extract keywords and fetch images - MORE images for dynamic feel (2 per second)
         keywords = extract_keywords_from_script(script)
-        # Calculate how many images we need (1 image per second minimum, more for shorter durations)
-        images_needed = max(int(audio_duration) + 5, 15)  # At least 15 images
+        # Calculate images needed: 2 images per second for fast-paced video
+        images_needed = max(int(audio_duration * 2), 20)  # At least 20 images, 2 per second
+        images_needed = min(images_needed, 100)  # Cap at 100 to prevent slowness
         
-        # Expand keywords by repeating them to get more variety
-        expanded_keywords = []
+        # Use all unique keywords, repeat if needed for more images
+        expanded_keywords = keywords.copy()
         while len(expanded_keywords) < images_needed:
             expanded_keywords.extend(keywords)
         
+        # Use the first images_needed keywords
         image_urls = fetch_stock_images(expanded_keywords[:images_needed], count=images_needed)
-        logger.info(f"Fetching {images_needed} images for {audio_duration:.1f}s video")
+        logger.info(f"Fetching {images_needed} images (2/sec) using {len(keywords)} keywords for {audio_duration:.1f}s video")
         
         jobs_storage[job_id]['progress'] = 50
         jobs_storage[job_id]['message'] = 'Creating video...'
@@ -339,72 +405,109 @@ async def generate_video_job(job_id: str, script: str, music_url: Optional[str],
         if not image_clips:
             raise Exception("Failed to fetch any images")
         
+        jobs_storage[job_id]['progress'] = 55
+        jobs_storage[job_id]['message'] = f'Processing {len(image_clips)} images...'
+        logger.info(f"Downloaded {len(image_clips)} images, creating video clips...")
+        
         # Create video from images with quick transitions (0.5-1 sec per image)
         clips = []
         clip_duration = max(0.5, audio_duration / len(image_clips))  # At least 0.5s per image
         
         logger.info(f"Creating video: {len(image_clips)} images, {clip_duration:.2f}s each")
         
-        for img_path in image_clips:
-            # Load image and resize to cover the frame (crop to fit)
-            clip = ImageClip(img_path, duration=clip_duration)
-            
-            # Calculate resize to cover (crop center)
-            img_aspect = clip.w / clip.h
-            target_aspect = video_width / video_height
-            
-            if img_aspect > target_aspect:
-                # Image is wider, fit height and crop width
-                new_height = video_height
-                new_width = int(new_height * img_aspect)
-                clip = clip.resized(height=new_height)
-            else:
-                # Image is taller, fit width and crop height
-                new_width = video_width
-                new_height = int(new_width / img_aspect)
-                clip = clip.resized(width=new_width)
-            
-            # Crop to exact size from center
-            clip = clip.cropped(
-                x_center=clip.w/2, 
-                y_center=clip.h/2, 
-                width=video_width, 
-                height=video_height
-            )
-            clips.append(clip)
+        for idx, img_path in enumerate(image_clips):
+            try:
+                # Update progress for each image processed
+                if idx % 5 == 0:  # Update every 5 images
+                    progress = 55 + int((idx / len(image_clips)) * 10)
+                    jobs_storage[job_id]['progress'] = progress
+                    jobs_storage[job_id]['message'] = f'Creating clips... ({idx}/{len(image_clips)})'
+                
+                # Load image and resize to cover the frame (crop to fit)
+                clip = ImageClip(img_path, duration=clip_duration)
+                
+                # Calculate resize to cover (crop center)
+                img_aspect = clip.w / clip.h
+                target_aspect = video_width / video_height
+                
+                if img_aspect > target_aspect:
+                    # Image is wider, fit height and crop width
+                    new_height = video_height
+                    new_width = int(new_height * img_aspect)
+                    clip = clip.resized(height=new_height)
+                else:
+                    # Image is taller, fit width and crop height
+                    new_width = video_width
+                    new_height = int(new_width / img_aspect)
+                    clip = clip.resized(width=new_width)
+                
+                # Crop to exact size from center
+                clip = clip.cropped(
+                    x_center=clip.w/2, 
+                    y_center=clip.h/2, 
+                    width=video_width, 
+                    height=video_height
+                )
+                clips.append(clip)
+            except Exception as e:
+                logger.error(f"Failed to process image {idx}: {str(e)}")
+                # Continue with other images
+                continue
+        
+        if not clips:
+            raise Exception("No valid image clips created")
+        
+        jobs_storage[job_id]['progress'] = 65
+        jobs_storage[job_id]['message'] = 'Composing video...'
+        logger.info(f"Concatenating {len(clips)} clips...")
         
         video = concatenate_videoclips(clips, method="compose")
         
         # Add audio
+        jobs_storage[job_id]['progress'] = 68
+        jobs_storage[job_id]['message'] = 'Adding voiceover...'
         audio_clip = AudioFileClip(audio_path)
         video = video.with_audio(audio_clip)
         
-        jobs_storage[job_id]['progress'] = 70
+        jobs_storage[job_id]['progress'] = 72
         jobs_storage[job_id]['message'] = 'Adding subtitles...'
+        logger.info("Starting subtitle generation...")
         
         # Add subtitles
         if include_subtitles:
             try:
                 subtitles = generate_subtitles_from_script(script, audio_duration)
+                logger.info(f"Generated {len(subtitles)} subtitle segments")
                 subtitle_clips = []
                 
-                for subtitle in subtitles:
-                    txt_clip = create_subtitle_clip(
-                        subtitle['text'],
-                        subtitle['end'] - subtitle['start'],
-                        (video_width, video_height)
-                    )
-                    if txt_clip:  # Only add if not None
-                        txt_clip = txt_clip.with_start(subtitle['start'])
-                        subtitle_clips.append(txt_clip)
+                for i, subtitle in enumerate(subtitles):
+                    try:
+                        txt_clip = create_subtitle_clip(
+                            subtitle['text'],
+                            subtitle['end'] - subtitle['start'],
+                            (video_width, video_height)
+                        )
+                        if txt_clip:  # Only add if not None
+                            txt_clip = txt_clip.with_start(subtitle['start'])
+                            subtitle_clips.append(txt_clip)
+                            logger.info(f"Created subtitle {i+1}/{len(subtitles)}: '{subtitle['text'][:30]}...'")
+                    except Exception as e:
+                        logger.warning(f"Failed to create subtitle {i+1}: {str(e)}")
+                        continue
                 
                 if subtitle_clips:
+                    logger.info(f"Compositing {len(subtitle_clips)} subtitle clips...")
+                    jobs_storage[job_id]['progress'] = 75
+                    jobs_storage[job_id]['message'] = f'Compositing {len(subtitle_clips)} subtitles...'
                     video = CompositeVideoClip([video] + subtitle_clips)
+                    logger.info("Subtitles added successfully")
                 else:
-                    logger.info("Skipping subtitles - TextClip not configured")
+                    logger.warning("No subtitle clips created - skipping subtitles")
             except Exception as e:
                 logger.error(f"Failed to add subtitles: {str(e)}")
                 # Continue without subtitles
+        else:
+            logger.info("Subtitles disabled by user")
         
         jobs_storage[job_id]['progress'] = 85
         jobs_storage[job_id]['message'] = 'Adding background music...'
@@ -417,7 +520,7 @@ async def generate_video_job(job_id: str, script: str, music_url: Optional[str],
                 with open(music_path, 'wb') as f:
                     f.write(music_response.content)
                 
-                music_clip = AudioFileClip(str(music_path)).volumex(0.3)
+                music_clip = AudioFileClip(str(music_path)).with_effects([afx.MultiplyVolume(0.3)])
                 # Trim or loop music to match video duration
                 if music_clip.duration > video.duration:
                     music_clip = music_clip.subclipped(0, video.duration)
@@ -435,15 +538,15 @@ async def generate_video_job(job_id: str, script: str, music_url: Optional[str],
         jobs_storage[job_id]['progress'] = 95
         jobs_storage[job_id]['message'] = 'Exporting video...'
         
-        # Export video
+        # Export video with optimized settings for speed
         output_path = GENERATED_VIDEOS_DIR / f"{job_id}.mp4"
         video.write_videofile(
             str(output_path),
-            fps=30,
+            fps=24,  # Lower FPS for faster export
             codec='libx264',
+            preset='ultrafast',  # Fastest encoding preset
             audio_codec='aac',
-            preset='medium',
-            bitrate='5000k',
+            threads=4,  # Limit threads to prevent overload
             temp_audiofile=str(TEMP_MEDIA_DIR / f"{job_id}_temp_audio.m4a"),
             remove_temp=True,
             logger=None  # Suppress moviepy logs
@@ -462,15 +565,16 @@ async def generate_video_job(job_id: str, script: str, music_url: Optional[str],
         jobs_storage[job_id]['message'] = 'Video generated successfully!'
         jobs_storage[job_id]['video_url'] = f"/api/video/download/{job_id}"
         
-        # Save to database
-        await db.video_projects.update_one(
-            {"job_id": job_id},
-            {"$set": {
-                "status": "completed",
-                "video_url": f"/api/video/download/{job_id}",
-                "completed_at": datetime.now(timezone.utc).isoformat()
-            }}
-        )
+        # Save to database (if available)
+        if db is not None:
+            await db.video_projects.update_one(
+                {"job_id": job_id},
+                {"$set": {
+                    "status": "completed",
+                    "video_url": f"/api/video/download/{job_id}",
+                    "completed_at": datetime.now(timezone.utc).isoformat()
+                }}
+            )
         
     except Exception as e:
         logger.error(f"Video generation failed for job {job_id}: {str(e)}")
@@ -478,13 +582,14 @@ async def generate_video_job(job_id: str, script: str, music_url: Optional[str],
         jobs_storage[job_id]['error'] = str(e)
         jobs_storage[job_id]['message'] = f'Failed: {str(e)}'
         
-        await db.video_projects.update_one(
-            {"job_id": job_id},
-            {"$set": {
-                "status": "failed",
-                "error": str(e)
-            }}
-        )
+        if db is not None:
+            await db.video_projects.update_one(
+                {"job_id": job_id},
+                {"$set": {
+                    "status": "failed",
+                    "error": str(e)
+                }}
+            )
 
 @video_router.post("/generate", response_model=VideoGenerateResponse)
 async def generate_video(request: VideoGenerateRequest, background_tasks: BackgroundTasks):
@@ -500,18 +605,19 @@ async def generate_video(request: VideoGenerateRequest, background_tasks: Backgr
         'error': None
     }
     
-    # Save to database
-    project_doc = {
-        "job_id": job_id,
-        "script": request.script,
-        "music_url": request.music_url,
-        "voice_style": request.voice_style,
-        "include_subtitles": request.include_subtitles,
-        "video_format": request.video_format,
-        "status": "queued",
-        "created_at": datetime.now(timezone.utc).isoformat()
-    }
-    await db.video_projects.insert_one(project_doc)
+    # Save to database (if available)
+    if db is not None:
+        project_doc = {
+            "job_id": job_id,
+            "script": request.script,
+            "music_url": request.music_url,
+            "voice_style": request.voice_style,
+            "include_subtitles": request.include_subtitles,
+            "video_format": request.video_format,
+            "status": "queued",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.video_projects.insert_one(project_doc)
     
     # Start background task
     background_tasks.add_task(
@@ -563,5 +669,7 @@ async def download_video(job_id: str):
 @video_router.get("/projects", response_model=List[VideoProject])
 async def list_projects():
     """List all video projects"""
+    if db is None:
+        return []
     projects = await db.video_projects.find({}, {"_id": 0}).sort("created_at", -1).limit(50).to_list(50)
     return projects
