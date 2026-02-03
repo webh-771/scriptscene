@@ -234,7 +234,7 @@ def create_subtitle_clip(subtitle_text: str, duration: float, video_size: tuple)
         method='caption',
         size=(video_size[0] * 0.9, None),
         align='center'
-    ).set_duration(duration).set_position(('center', 0.85), relative=True)
+    ).with_duration(duration).with_position(('center', 0.85), relative=True)
 
 async def generate_video_job(job_id: str, script: str, music_url: Optional[str], voice_style: str, include_subtitles: bool, video_format: str = "vertical"):
     """Background task to generate video"""
