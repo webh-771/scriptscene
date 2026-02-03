@@ -272,14 +272,14 @@ const VideoGeneratorPage = () => {
             animate={{ opacity: 1, x: 0 }}
             className="space-y-6"
           >
-            <Card className="glass border-white/10">
-              <CardHeader>
-                <CardTitle>Video Preview</CardTitle>
-                <CardDescription>Your generated video will appear here</CardDescription>
-              </CardHeader>
-              <CardContent>
+            <div className="brutal-card bg-white p-6">
+              <div className="mb-4">
+                <h2 className="text-2xl font-black uppercase">VIDEO PREVIEW</h2>
+                <p className="text-sm font-bold mt-1">YOUR GENERATED VIDEO APPEARS HERE</p>
+              </div>
+              <div>
                 {/* Video Player */}
-                <div className={`${videoFormat === 'vertical' ? 'aspect-[9/16] max-w-md mx-auto' : 'aspect-video'} bg-black rounded-lg overflow-hidden mb-6`}>
+                <div className={`${videoFormat === 'vertical' ? 'aspect-[9/16] max-w-md mx-auto' : 'aspect-video'} bg-black border-4 border-black box-shadow-[8px_8px_0_0_black] mb-6`}>
                   {videoUrl ? (
                     <video
                       data-testid="video-player"
@@ -288,12 +288,12 @@ const VideoGeneratorPage = () => {
                       src={`${BACKEND_URL}${videoUrl}`}
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-black/60">
-                      <div className="text-center text-gray-500">
-                        <Play className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                        <p>Video preview will appear here</p>
-                        <p className="text-sm mt-2">
-                          Format: {videoFormat === 'vertical' ? 'Vertical (9:16)' : 'Horizontal (16:9)'}
+                    <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                      <div className="text-center">
+                        <Play className="h-16 w-16 mx-auto mb-4" />
+                        <p className="font-bold uppercase">VIDEO PREVIEW</p>
+                        <p className="text-sm font-bold mt-2">
+                          {videoFormat === 'vertical' ? 'VERTICAL (9:16)' : 'HORIZONTAL (16:9)'}
                         </p>
                       </div>
                     </div>
@@ -302,47 +302,46 @@ const VideoGeneratorPage = () => {
 
                 {/* Progress */}
                 {isGenerating && (
-                  <div data-testid="progress-container" className="space-y-3">
-                    <Progress value={progress} className="h-2" />
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-400">{statusMessage}</span>
-                      <span className="text-primary font-medium">{progress}%</span>
+                  <div data-testid="progress-container" className="space-y-3 brutal-card bg-[#FFE66D] p-4">
+                    <div className="w-full bg-white border-3 border-black h-8 relative overflow-hidden">
+                      <div 
+                        className="h-full bg-black transition-all duration-300"
+                        style={{ width: `${progress}%` }}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="font-black uppercase text-sm">{statusMessage}</span>
+                      <span className="font-black text-lg">{progress}%</span>
                     </div>
                   </div>
                 )}
 
                 {/* Download Button */}
                 {videoUrl && (
-                  <Button
+                  <button
                     data-testid="download-button"
                     onClick={handleDownload}
-                    className="w-full h-12 rounded-full mt-4"
-                    variant="outline"
+                    className="brutal-button w-full h-14 bg-[#4ECDC4] text-black hover:bg-[#4ECDC4] mt-4 text-xl"
                   >
-                    <Download className="mr-2 h-4 w-4" />
-                    Download Video
-                  </Button>
+                    <Download className="mr-2 h-6 w-6 inline" />
+                    DOWNLOAD VIDEO
+                  </button>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
             {/* Tips Card */}
-            <Card className="glass border-white/10">
-              <CardHeader>
-                <CardTitle className="text-lg">Tips for Best Results</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2 text-sm text-gray-400">
-                  <li>• Keep sentences clear and concise</li>
-                  <li>• Use punctuation for natural pauses</li>
-                  <li>• Scripts between 100-500 words work best</li>
-                  <li>• Video generation takes 1-3 minutes</li>
-                  <li>• Choose music that matches your content tone</li>
-                  <li>• Vertical format is perfect for Shorts, TikTok, Reels</li>
-                  <li>• Horizontal format for standard YouTube videos</li>
-                </ul>
-              </CardContent>
-            </Card>
+            <div className="brutal-card bg-[#FF6B6B] p-6">
+              <h3 className="text-xl font-black mb-4 uppercase">TIPS FOR BEST RESULTS</h3>
+              <ul className="space-y-2 text-sm font-bold">
+                <li>• KEEP SENTENCES CLEAR</li>
+                <li>• USE PUNCTUATION FOR PAUSES</li>
+                <li>• 100-500 WORDS WORKS BEST</li>
+                <li>• GENERATION TAKES 1-3 MIN</li>
+                <li>• VERTICAL = SHORTS/TIKTOK</li>
+                <li>• HORIZONTAL = YOUTUBE</li>
+              </ul>
+            </div>
           </motion.div>
         </div>
       </div>
