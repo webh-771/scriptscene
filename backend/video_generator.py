@@ -102,19 +102,28 @@ def split_script_into_sentences(script: str) -> List[str]:
 def generate_voiceover_elevenlabs(script: str, voice_style: str = "Joanna") -> tuple:
     """Generate voiceover using ElevenLabs"""
     try:
-        client = ElevenLabs(api_key="sk_cd68ec48735218d627b91b35f4e96830b853a004536c0748")
+        import requests
         
         audio_id = str(uuid.uuid4())
         audio_path = AUDIO_FILES_DIR / f"{audio_id}.mp3"
         
-        audio_generator = client.text_to_speech.convert(
-            text=script,
-            voice_id="21m00Tcm4TlvDq8ikWAM",  # Rachel voice
-            model_id="eleven_monolingual_v1"
-        )
+        url = "https://api.elevenlabs.io/v1/text-to-speech/21m00Tcm4TlvDq8ikWAM"
+        headers = {
+            "xi-api-key": "sk_cd68ec48735218d627b91b35f4e96830b853a004536c0748",
+            "Content-Type": "application/json"
+        }
+        data = {
+            "text": script,
+            "model_id": "eleven_multilingual_v2"
+        }
+        
+        response = requests.post(url, json=data, headers=headers, stream=True)
+        
+        if response.status_code != 200:
+            raise Exception(f"ElevenLabs error: {response.status_code} - {response.text}")
         
         with open(audio_path, 'wb') as f:
-            for chunk in audio_generator:
+            for chunk in response.iter_content(chunk_size=1024):
                 f.write(chunk)
         
         audio_clip = AudioFileClip(str(audio_path))
@@ -126,6 +135,7 @@ def generate_voiceover_elevenlabs(script: str, voice_style: str = "Joanna") -> t
         
     except Exception as e:
         logger.error(f"ElevenLabs error: {str(e)}")
+        raise
 def generate_subtitles_from_script(script: str, duration: float) -> List[Dict]:
     """Generate subtitle segments with timing"""
     sentences = split_script_into_sentences(script)
