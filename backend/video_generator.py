@@ -372,8 +372,8 @@ async def generate_video_job(job_id: str, script: str, music_url: Optional[str],
         jobs_storage[job_id]['progress'] = 10
         jobs_storage[job_id]['message'] = 'Generating voiceover...'
         
-        # Generate voiceover
-        audio_path, audio_duration = await generate_voiceover_with_puter(script, voice_style)
+        # Generate voiceover - using Gemini TTS (simpler and more reliable than browser-based Puter)
+        audio_path, audio_duration = generate_voiceover_with_gemini(script, voice_style)
         
         jobs_storage[job_id]['progress'] = 30
         jobs_storage[job_id]['message'] = 'Fetching stock media...'
