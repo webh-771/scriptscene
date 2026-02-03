@@ -262,18 +262,38 @@ async def generate_video_job(job_id: str, script: str, music_url: Optional[str],
         jobs_storage[job_id]['progress'] = 50
         jobs_storage[job_id]['message'] = 'Creating video...'
         
-        # Download images
+        # Download images or create placeholders
         image_clips = []
+        colors = [
+            (255, 87, 87),   # Red
+            (87, 255, 87),   # Green  
+            (87, 87, 255),   # Blue
+            (255, 255, 87),  # Yellow
+            (255, 87, 255),  # Magenta
+        ]
+        
         for idx, img_url in enumerate(image_urls):
-            try:
-                response = requests.get(img_url, timeout=10)
-                img_path = TEMP_MEDIA_DIR / f"{job_id}_img_{idx}.jpg"
-                with open(img_path, 'wb') as f:
-                    f.write(response.content)
-                image_clips.append(str(img_path))
-            except Exception as e:
-                logger.error(f"Failed to download image: {str(e)}")
-                continue
+            if img_url == "placeholder":
+                # Create placeholder image
+                color = colors[idx % len(colors)]
+                keyword = keywords[idx] if idx < len(keywords) else f"Scene {idx + 1}"
+                img_path = create_placeholder_image(video_width, video_height, color, keyword.title())
+                image_clips.append(img_path)
+            else:
+                # Download real image
+                try:
+                    response = requests.get(img_url, timeout=10)
+                    img_path = TEMP_MEDIA_DIR / f"{job_id}_img_{idx}.jpg"
+                    with open(img_path, 'wb') as f:
+                        f.write(response.content)
+                    image_clips.append(str(img_path))
+                except Exception as e:
+                    logger.error(f"Failed to download image: {str(e)}")
+                    # Create placeholder as fallback
+                    color = colors[idx % len(colors)]
+                    keyword = keywords[idx] if idx < len(keywords) else f"Scene {idx + 1}"
+                    img_path = create_placeholder_image(video_width, video_height, color, keyword.title())
+                    image_clips.append(img_path)
         
         if not image_clips:
             raise Exception("Failed to fetch any images")
