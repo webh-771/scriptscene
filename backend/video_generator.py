@@ -354,18 +354,27 @@ async def generate_video_job(job_id: str, script: str, music_url: Optional[str],
         
         # Add subtitles
         if include_subtitles:
-            subtitles = generate_subtitles_from_script(script, audio_duration)
-            subtitle_clips = []
-            
-            for subtitle in subtitles:
-                txt_clip = create_subtitle_clip(
-                    subtitle['text'],
-                    subtitle['end'] - subtitle['start'],
-                    (video_width, video_height)
-                ).with_start(subtitle['start'])
-                subtitle_clips.append(txt_clip)
-            
-            video = CompositeVideoClip([video] + subtitle_clips)
+            try:
+                subtitles = generate_subtitles_from_script(script, audio_duration)
+                subtitle_clips = []
+                
+                for subtitle in subtitles:
+                    txt_clip = create_subtitle_clip(
+                        subtitle['text'],
+                        subtitle['end'] - subtitle['start'],
+                        (video_width, video_height)
+                    )
+                    if txt_clip:  # Only add if not None
+                        txt_clip = txt_clip.with_start(subtitle['start'])
+                        subtitle_clips.append(txt_clip)
+                
+                if subtitle_clips:
+                    video = CompositeVideoClip([video] + subtitle_clips)
+                else:
+                    logger.info("Skipping subtitles - TextClip not configured")
+            except Exception as e:
+                logger.error(f"Failed to add subtitles: {str(e)}")
+                # Continue without subtitles
         
         jobs_storage[job_id]['progress'] = 85
         jobs_storage[job_id]['message'] = 'Adding background music...'
