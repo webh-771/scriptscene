@@ -393,9 +393,11 @@ async def generate_video_job(job_id: str, script: str, music_url: Optional[str],
         if not image_clips:
             raise Exception("Failed to fetch any images")
         
-        # Create video from images with proper aspect ratio
+        # Create video from images with quick transitions (0.5-1 sec per image)
         clips = []
-        clip_duration = audio_duration / len(image_clips)
+        clip_duration = max(0.5, audio_duration / len(image_clips))  # At least 0.5s per image
+        
+        logger.info(f"Creating video: {len(image_clips)} images, {clip_duration:.2f}s each")
         
         for img_path in image_clips:
             # Load image and resize to cover the frame (crop to fit)
