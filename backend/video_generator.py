@@ -203,7 +203,7 @@ def create_placeholder_image(width: int, height: int, color: tuple, text: str = 
         try:
             # Try to use a nice font
             font = ImageFont.truetype("arial.ttf", 60)
-        except:
+        except Exception:
             # Fallback to default font
             font = ImageFont.load_default()
         
