@@ -369,11 +369,11 @@ async def generate_video_job(job_id: str, script: str, music_url: Optional[str],
                 music_clip = AudioFileClip(str(music_path)).volumex(0.3)
                 # Trim or loop music to match video duration
                 if music_clip.duration > video.duration:
-                    music_clip = music_clip.subclip(0, video.duration)
+                    music_clip = music_clip.subclipped(0, video.duration)
                 else:
                     # Loop music
                     loops = int(video.duration / music_clip.duration) + 1
-                    music_clip = concatenate_audioclips([music_clip] * loops).subclip(0, video.duration)
+                    music_clip = concatenate_audioclips([music_clip] * loops).subclipped(0, video.duration)
                 
                 # Mix audio
                 final_audio = CompositeAudioClip([video.audio, music_clip])
