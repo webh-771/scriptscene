@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowLeft, Play, Download, Loader2, Mic, Type, Sparkles, Youtube } from 'lucide-react';
+import { ArrowLeft, Play, Download, Loader2, Mic, Type, Sparkles, Youtube, Image, AlignCenter } from 'lucide-react';
 import axios from 'axios';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -15,22 +15,82 @@ const NICHES = [
   { value: 'finance', label: 'MONEY / FINANCE' },
 ];
 
-const VOICES = [
-  { value: 'en-US-AndrewNeural', label: 'ANDREW (M, NATURAL)' },
-  { value: 'en-US-AvaNeural', label: 'AVA (F, NATURAL)' },
-  { value: 'en-US-EmmaNeural', label: 'EMMA (F, NATURAL)' },
-  { value: 'en-US-BrianNeural', label: 'BRIAN (M, NATURAL)' },
-  { value: 'en-GB-RyanNeural', label: 'RYAN (M, UK)' },
+const VOICES = {
+  edge: [
+    { value: 'en-US-AndrewNeural', label: 'ANDREW (M, NATURAL)' },
+    { value: 'en-US-AvaNeural', label: 'AVA (F, NATURAL)' },
+    { value: 'en-US-EmmaNeural', label: 'EMMA (F, NATURAL)' },
+    { value: 'en-US-BrianNeural', label: 'BRIAN (M, NATURAL)' },
+    { value: 'en-GB-RyanNeural', label: 'RYAN (M, UK)' },
+  ],
+  kokoro: [
+    { value: 'am_michael', label: 'MICHAEL (M)' },
+    { value: 'am_adam', label: 'ADAM (M)' },
+    { value: 'af_heart', label: 'HEART (F)' },
+    { value: 'af_bella', label: 'BELLA (F)' },
+    { value: 'bm_george', label: 'GEORGE (M, UK)' },
+    { value: 'bf_emma', label: 'EMMA (F, UK)' },
+  ],
+};
+
+const BACKGROUNDS = [
+  { value: 'broll', label: 'STOCK B-ROLL' },
+  { value: 'gameplay', label: 'GAMEPLAY LOOP' },
+  { value: 'gradient', label: 'GRADIENT' },
+  { value: 'solid', label: 'SOLID COLOR' },
+  { value: 'audiogram', label: 'AUDIOGRAM' },
 ];
+
+const GRADIENTS = ['aurora', 'sunset', 'mint', 'violet', 'noir'];
+const ASPECTS = [{ value: '9:16', label: '9:16' }, { value: '1:1', label: '1:1' }, { value: '16:9', label: '16:9' }];
+const PRESETS = ['storytime', 'top5', 'didyouknow', 'hottake', 'explainer', 'tutorial', 'mythbuster', 'casestudy'];
+const POSITIONS = ['top', 'middle', 'bottom'];
+const PILLS = ['none', 'filled', 'outline'];
+
+const Field = ({ label, children }) => (
+  <div className="mb-4">
+    <label className="text-xs font-black mb-1 block uppercase">{label}</label>
+    {children}
+  </div>
+);
+const sel = 'brutal-input w-full p-3 font-bold';
 
 const VideoGeneratorPage = () => {
   const navigate = useNavigate();
+
+  // source
+  const [source, setSource] = useState('topic');     // topic | reddit | script
   const [topic, setTopic] = useState('');
+  const [redditUrl, setRedditUrl] = useState('');
+  const [script, setScript] = useState('');
   const [niche, setNiche] = useState('scary');
+
+  // voice
+  const [engine, setEngine] = useState('edge');
   const [voice, setVoice] = useState('en-US-AndrewNeural');
+
+  // background
+  const [bgType, setBgType] = useState('broll');
+  const [bgQuery, setBgQuery] = useState('');
+  const [gradient, setGradient] = useState('aurora');
+  const [solidColor, setSolidColor] = useState('#101418');
+
+  // format / captions
+  const [aspect, setAspect] = useState('9:16');
+  const [preset, setPreset] = useState('storytime');
+  const [position, setPosition] = useState('middle');
+  const [wordsPerChunk, setWordsPerChunk] = useState(3);
+  const [capColor, setCapColor] = useState('#FFFFFF');
+  const [highlight, setHighlight] = useState('');
+  const [fontScale, setFontScale] = useState(1.0);
+  const [strokeWidth, setStrokeWidth] = useState(6);
+  const [pill, setPill] = useState('none');
+  const [uppercase, setUppercase] = useState(true);
+
   const [music, setMusic] = useState(true);
   const [publishYoutube, setPublishYoutube] = useState(false);
 
+  // job
   const [isGenerating, setIsGenerating] = useState(false);
   const [jobId, setJobId] = useState(null);
   const [progress, setProgress] = useState(0);
@@ -38,6 +98,9 @@ const VideoGeneratorPage = () => {
   const [videoUrl, setVideoUrl] = useState(null);
   const [youtubeUrl, setYoutubeUrl] = useState(null);
   const [title, setTitle] = useState('');
+
+  // keep voice valid when engine switches
+  useEffect(() => { setVoice(VOICES[engine][0].value); }, [engine]);
 
   useEffect(() => {
     if (jobId && isGenerating) {
@@ -53,7 +116,6 @@ const VideoGeneratorPage = () => {
       setProgress(data.progress || 0);
       setStage((data.stage || '').toUpperCase());
       if (data.title) setTitle(data.title);
-
       if (data.status === 'done') {
         setIsGenerating(false);
         setVideoUrl(data.video_url);
@@ -63,29 +125,43 @@ const VideoGeneratorPage = () => {
         setIsGenerating(false);
         toast.error(data.error || 'Generation failed');
       }
-    } catch (e) {
-      console.error('status check failed', e);
-    }
+    } catch (e) { console.error(e); }
   };
 
+  const validSource = () =>
+    (source === 'topic' && topic.trim().length >= 3) ||
+    (source === 'reddit' && redditUrl.includes('reddit.com')) ||
+    (source === 'script' && script.trim().length >= 10);
+
   const handleGenerate = async () => {
-    if (topic.trim().length < 3) {
-      toast.error('Enter a topic (3+ chars)');
-      return;
-    }
-    setIsGenerating(true);
-    setProgress(0);
-    setVideoUrl(null);
-    setYoutubeUrl(null);
-    setTitle('');
+    if (!validSource()) { toast.error('Fill the content source first'); return; }
+    setIsGenerating(true); setProgress(0);
+    setVideoUrl(null); setYoutubeUrl(null); setTitle('');
+
+    const payload = {
+      niche,
+      tts_engine: engine,
+      voice,
+      background_type: bgType,
+      aspect,
+      music,
+      publish_youtube: publishYoutube,
+      captions: {
+        preset, position, words_per_chunk: Number(wordsPerChunk),
+        color: capColor, highlight: highlight || null,
+        font_scale: Number(fontScale), stroke_width: Number(strokeWidth),
+        pill, uppercase,
+      },
+    };
+    if (source === 'topic') payload.topic = topic;
+    if (source === 'reddit') payload.reddit_url = redditUrl;
+    if (source === 'script') payload.script = script;
+    if (bgType === 'broll' || bgType === 'gameplay') payload.background_query = bgQuery || null;
+    if (bgType === 'gradient') payload.gradient = gradient;
+    if (bgType === 'solid') payload.solid_color = solidColor;
+
     try {
-      const { data } = await axios.post(`${API}/videos/generate`, {
-        topic,
-        niche,
-        voice,
-        music,
-        publish_youtube: publishYoutube,
-      });
+      const { data } = await axios.post(`${API}/videos/generate`, payload);
       setJobId(data.job_id);
       toast.success('Generation started!');
     } catch (e) {
@@ -94,6 +170,8 @@ const VideoGeneratorPage = () => {
     }
   };
 
+  const previewAspect = aspect === '9:16' ? 'aspect-[9/16] max-w-xs' : aspect === '1:1' ? 'aspect-square max-w-sm' : 'aspect-video max-w-md';
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b-4 border-black bg-[#FFE66D]">
@@ -101,89 +179,194 @@ const VideoGeneratorPage = () => {
           <button onClick={() => navigate('/')} className="brutal-button bg-white text-black px-6 flex items-center">
             <ArrowLeft className="h-5 w-5 mr-2" /> BACK
           </button>
-          <h1 className="text-3xl font-black uppercase">SHORTS GENERATOR</h1>
+          <h1 className="text-3xl font-black uppercase">STUDIO</h1>
           <div className="w-28" />
         </div>
       </header>
 
       <div className="max-w-7xl mx-auto px-6 py-12">
         <div className="grid lg:grid-cols-2 gap-8">
-          {/* Inputs */}
+          {/* CONTROLS */}
           <motion.div initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
+
+            {/* Source */}
             <div className="brutal-card bg-[#4ECDC4] p-6">
-              <h3 className="text-2xl font-black uppercase flex items-center gap-2 mb-1">
-                <Type className="h-6 w-6" /> TOPIC
-              </h3>
-              <p className="text-sm font-bold mb-4">ONE LINE — THE AI WRITES THE REST</p>
-              <input
-                data-testid="topic-input"
-                value={topic}
-                onChange={(e) => setTopic(e.target.value)}
-                maxLength={300}
-                placeholder="e.g. a creepy story about the last subway train"
-                className="brutal-input w-full p-4 text-black placeholder:text-gray-600"
-              />
+              <h3 className="text-xl font-black uppercase flex items-center gap-2 mb-3"><Type className="h-5 w-5" /> CONTENT</h3>
+              <div className="flex gap-2 mb-4">
+                {['topic', 'reddit', 'script'].map((s) => (
+                  <button key={s} onClick={() => setSource(s)}
+                    className={`brutal-button flex-1 py-2 text-sm ${source === s ? 'bg-black text-white' : 'bg-white text-black'}`}>
+                    {s.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+              {source === 'topic' && (
+                <input value={topic} onChange={(e) => setTopic(e.target.value)} maxLength={300}
+                  placeholder="e.g. a creepy story about the last subway train"
+                  className="brutal-input w-full p-4 text-black placeholder:text-gray-600" />
+              )}
+              {source === 'reddit' && (
+                <input value={redditUrl} onChange={(e) => setRedditUrl(e.target.value)}
+                  placeholder="https://www.reddit.com/r/tifu/comments/..."
+                  className="brutal-input w-full p-4 text-black placeholder:text-gray-600" />
+              )}
+              {source === 'script' && (
+                <textarea value={script} onChange={(e) => setScript(e.target.value)} rows={5}
+                  placeholder="Paste your own script verbatim..."
+                  className="brutal-input w-full p-4 text-black placeholder:text-gray-600 resize-none" />
+              )}
+              {source !== 'script' && (
+                <div className="mt-3">
+                  <Field label="Niche">
+                    <select value={niche} onChange={(e) => setNiche(e.target.value)} className={sel}>
+                      {NICHES.map((n) => <option key={n.value} value={n.value}>{n.label}</option>)}
+                    </select>
+                  </Field>
+                </div>
+              )}
             </div>
 
-            <div className="brutal-card bg-[#FFE66D] p-6">
-              <h3 className="text-xl font-black uppercase flex items-center gap-2 mb-3">
-                <Sparkles className="h-5 w-5" /> NICHE
-              </h3>
-              <select value={niche} onChange={(e) => setNiche(e.target.value)} className="brutal-input w-full p-3 font-bold">
-                {NICHES.map((n) => <option key={n.value} value={n.value}>{n.label}</option>)}
-              </select>
-            </div>
-
+            {/* Voice */}
             <div className="brutal-card bg-[#FF6B6B] p-6">
-              <h3 className="text-xl font-black uppercase flex items-center gap-2 mb-3">
-                <Mic className="h-5 w-5" /> VOICE
-              </h3>
-              <select value={voice} onChange={(e) => setVoice(e.target.value)} className="brutal-input w-full p-3 font-bold">
-                {VOICES.map((v) => <option key={v.value} value={v.value}>{v.label}</option>)}
-              </select>
+              <h3 className="text-xl font-black uppercase flex items-center gap-2 mb-3"><Mic className="h-5 w-5" /> VOICE</h3>
+              <Field label="Engine">
+                <div className="flex gap-2">
+                  {['edge', 'kokoro'].map((e) => (
+                    <button key={e} onClick={() => setEngine(e)}
+                      className={`brutal-button flex-1 py-2 text-sm ${engine === e ? 'bg-black text-white' : 'bg-white text-black'}`}>
+                      {e === 'edge' ? 'EDGE (CLOUD)' : 'KOKORO (LOCAL)'}
+                    </button>
+                  ))}
+                </div>
+              </Field>
+              <Field label="Voice">
+                <select value={voice} onChange={(e) => setVoice(e.target.value)} className={sel}>
+                  {VOICES[engine].map((v) => <option key={v.value} value={v.value}>{v.label}</option>)}
+                </select>
+              </Field>
             </div>
 
-            <div className="brutal-card bg-white p-6 space-y-4">
-              <label className="flex items-center gap-4 cursor-pointer">
-                <input type="checkbox" checked={music} onChange={(e) => setMusic(e.target.checked)} className="w-6 h-6 border-3 border-black" />
-                <span className="text-lg font-black uppercase">BACKGROUND MUSIC</span>
-              </label>
-              <label className="flex items-center gap-4 cursor-pointer">
-                <input data-testid="publish-toggle" type="checkbox" checked={publishYoutube} onChange={(e) => setPublishYoutube(e.target.checked)} className="w-6 h-6 border-3 border-black" />
-                <span className="text-lg font-black uppercase flex items-center gap-2"><Youtube className="h-5 w-5" /> AUTO-UPLOAD TO YOUTUBE</span>
+            {/* Background */}
+            <div className="brutal-card bg-[#FFE66D] p-6">
+              <h3 className="text-xl font-black uppercase flex items-center gap-2 mb-3"><Image className="h-5 w-5" /> BACKGROUND</h3>
+              <Field label="Type">
+                <select value={bgType} onChange={(e) => setBgType(e.target.value)} className={sel}>
+                  {BACKGROUNDS.map((b) => <option key={b.value} value={b.value}>{b.label}</option>)}
+                </select>
+              </Field>
+              {(bgType === 'broll' || bgType === 'gameplay') && (
+                <Field label="Search / keyword (optional)">
+                  <input value={bgQuery} onChange={(e) => setBgQuery(e.target.value)}
+                    placeholder="e.g. dark forest, city night" className={sel} />
+                </Field>
+              )}
+              {bgType === 'gradient' && (
+                <Field label="Gradient">
+                  <select value={gradient} onChange={(e) => setGradient(e.target.value)} className={sel}>
+                    {GRADIENTS.map((g) => <option key={g} value={g}>{g.toUpperCase()}</option>)}
+                  </select>
+                </Field>
+              )}
+              {bgType === 'solid' && (
+                <Field label="Color">
+                  <input type="color" value={solidColor} onChange={(e) => setSolidColor(e.target.value)}
+                    className="brutal-input w-full h-12 p-1" />
+                </Field>
+              )}
+            </div>
+
+            {/* Captions */}
+            <div className="brutal-card bg-white p-6">
+              <h3 className="text-xl font-black uppercase flex items-center gap-2 mb-3"><AlignCenter className="h-5 w-5" /> CAPTIONS</h3>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Preset">
+                  <select value={preset} onChange={(e) => setPreset(e.target.value)} className={sel}>
+                    {PRESETS.map((p) => <option key={p} value={p}>{p.toUpperCase()}</option>)}
+                  </select>
+                </Field>
+                <Field label="Position">
+                  <select value={position} onChange={(e) => setPosition(e.target.value)} className={sel}>
+                    {POSITIONS.map((p) => <option key={p} value={p}>{p.toUpperCase()}</option>)}
+                  </select>
+                </Field>
+                <Field label={`Words / chunk: ${wordsPerChunk}`}>
+                  <input type="range" min="1" max="5" value={wordsPerChunk}
+                    onChange={(e) => setWordsPerChunk(e.target.value)} className="w-full" />
+                </Field>
+                <Field label={`Font scale: ${fontScale}`}>
+                  <input type="range" min="0.6" max="1.6" step="0.1" value={fontScale}
+                    onChange={(e) => setFontScale(e.target.value)} className="w-full" />
+                </Field>
+                <Field label="Text color">
+                  <input type="color" value={capColor} onChange={(e) => setCapColor(e.target.value)} className="brutal-input w-full h-10 p-1" />
+                </Field>
+                <Field label="Highlight (accent)">
+                  <input type="color" value={highlight || '#FF6FB5'} onChange={(e) => setHighlight(e.target.value)} className="brutal-input w-full h-10 p-1" />
+                </Field>
+                <Field label={`Stroke: ${strokeWidth}`}>
+                  <input type="range" min="0" max="16" value={strokeWidth}
+                    onChange={(e) => setStrokeWidth(e.target.value)} className="w-full" />
+                </Field>
+                <Field label="Pill">
+                  <select value={pill} onChange={(e) => setPill(e.target.value)} className={sel}>
+                    {PILLS.map((p) => <option key={p} value={p}>{p.toUpperCase()}</option>)}
+                  </select>
+                </Field>
+              </div>
+              <label className="flex items-center gap-3 cursor-pointer mt-2">
+                <input type="checkbox" checked={uppercase} onChange={(e) => setUppercase(e.target.checked)} className="w-5 h-5 border-3 border-black" />
+                <span className="font-black uppercase text-sm">UPPERCASE</span>
               </label>
             </div>
 
-            <button
-              data-testid="generate-button"
-              onClick={handleGenerate}
-              disabled={isGenerating || topic.trim().length < 3}
-              className="brutal-button w-full h-20 bg-black text-white disabled:opacity-50 text-2xl"
-            >
+            {/* Format + output */}
+            <div className="brutal-card bg-[#4ECDC4] p-6">
+              <h3 className="text-xl font-black uppercase flex items-center gap-2 mb-3"><Sparkles className="h-5 w-5" /> OUTPUT</h3>
+              <Field label="Aspect ratio">
+                <div className="flex gap-2">
+                  {ASPECTS.map((a) => (
+                    <button key={a.value} onClick={() => setAspect(a.value)}
+                      className={`brutal-button flex-1 py-2 ${aspect === a.value ? 'bg-black text-white' : 'bg-white text-black'}`}>
+                      {a.label}
+                    </button>
+                  ))}
+                </div>
+              </Field>
+              <label className="flex items-center gap-3 cursor-pointer mt-2">
+                <input type="checkbox" checked={music} onChange={(e) => setMusic(e.target.checked)} className="w-5 h-5 border-3 border-black" />
+                <span className="font-black uppercase text-sm">BACKGROUND MUSIC</span>
+              </label>
+              <label className="flex items-center gap-3 cursor-pointer mt-2">
+                <input type="checkbox" checked={publishYoutube} onChange={(e) => setPublishYoutube(e.target.checked)} className="w-5 h-5 border-3 border-black" />
+                <span className="font-black uppercase text-sm flex items-center gap-2"><Youtube className="h-4 w-4" /> AUTO-UPLOAD TO YOUTUBE</span>
+              </label>
+            </div>
+
+            <button onClick={handleGenerate} disabled={isGenerating || !validSource()}
+              className="brutal-button w-full h-20 bg-black text-white disabled:opacity-50 text-2xl">
               {isGenerating
                 ? <><Loader2 className="mr-3 h-7 w-7 animate-spin inline" /> GENERATING...</>
-                : <><Play className="mr-3 h-7 w-7 inline" /> GENERATE SHORT</>}
+                : <><Play className="mr-3 h-7 w-7 inline" /> GENERATE</>}
             </button>
           </motion.div>
 
-          {/* Preview */}
-          <motion.div initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
+          {/* PREVIEW */}
+          <motion.div initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} className="space-y-6 lg:sticky lg:top-6 self-start">
             <div className="brutal-card bg-white p-6">
               <h2 className="text-2xl font-black uppercase mb-1">PREVIEW</h2>
               {title && <p className="text-sm font-bold mb-4">{title}</p>}
-              <div className="aspect-[9/16] max-w-md mx-auto bg-black border-4 border-black mb-6">
+              <div className={`${previewAspect} mx-auto bg-black border-4 border-black mb-6`}>
                 {videoUrl ? (
-                  <video data-testid="video-player" controls className="w-full h-full" src={`${BACKEND_URL}${videoUrl}`} />
+                  <video controls className="w-full h-full" src={`${BACKEND_URL}${videoUrl}`} />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center bg-gray-100">
                     <div className="text-center">
                       <Play className="h-16 w-16 mx-auto mb-4" />
-                      <p className="font-bold uppercase">9:16 SHORT</p>
+                      <p className="font-bold uppercase">{aspect}</p>
                     </div>
                   </div>
                 )}
               </div>
-
               {isGenerating && (
                 <div className="space-y-3 brutal-card bg-[#FFE66D] p-4">
                   <div className="w-full bg-white border-3 border-black h-8 overflow-hidden">
@@ -195,7 +378,6 @@ const VideoGeneratorPage = () => {
                   </div>
                 </div>
               )}
-
               {videoUrl && (
                 <button onClick={() => window.open(`${BACKEND_URL}${videoUrl}`, '_blank')} className="brutal-button w-full h-14 bg-[#4ECDC4] text-black mt-4 text-xl">
                   <Download className="mr-2 h-6 w-6 inline" /> DOWNLOAD
@@ -206,18 +388,6 @@ const VideoGeneratorPage = () => {
                   <Youtube className="mr-2 h-6 w-6 inline" /> VIEW ON YOUTUBE
                 </a>
               )}
-            </div>
-
-            <div className="brutal-card bg-[#FF6B6B] p-6">
-              <h3 className="text-xl font-black mb-4 uppercase">HOW IT WORKS</h3>
-              <ul className="space-y-2 text-sm font-bold">
-                <li>• AI WRITES ORIGINAL SCRIPT (COPYRIGHT-CLEAN)</li>
-                <li>• FREE NEURAL VOICEOVER</li>
-                <li>• WORD-BY-WORD CAPTIONS</li>
-                <li>• ROYALTY-FREE / LOCAL BACKGROUND</li>
-                <li>• AUTO 9:16 FOR SHORTS</li>
-                <li>• OPTIONAL 1-CLICK YOUTUBE UPLOAD</li>
-              </ul>
             </div>
           </motion.div>
         </div>
