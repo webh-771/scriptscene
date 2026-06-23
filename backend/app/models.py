@@ -62,6 +62,7 @@ class JobStatus(BaseModel):
     youtube_url: Optional[str] = None
     upload_status: Optional[str] = None   # queued | optimizing | uploading | uploaded | error
     upload_error: Optional[str] = None
+    music_credit: Optional[str] = None
     error: Optional[str] = None
     created_at: str
 

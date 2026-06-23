@@ -30,6 +30,11 @@ def _run_upload(job_id: str, req: PublishRequest) -> None:
             title, description, tags = meta["title"], meta["description"], meta["tags"]
             update_job(job_id, title=title, description=description, hashtags=tags)
 
+        # Append required music attribution (CC-BY/CC-BY-SA) verbatim
+        credit = job.get("music_credit")
+        if credit and credit not in description:
+            description = f"{description}\n\n{credit}".strip()
+
         update_job(job_id, upload_status="uploading")
         url = yt_svc.upload_short(
             OUTPUT_DIR / f"{job_id}.mp4", title=title, description=description,

@@ -87,13 +87,18 @@ def run_pipeline(job_id: str, req: GenerateRequest) -> None:
         bg_spec = _resolve_background(job_id, req, content)
 
         # 5. Compose (auto-fetch copyright-free music if library is empty)
+        music_track, music_credit = None, None
         if req.music and req.music_volume > 0:
             music_svc.ensure_music(req.niche)
+            music_track = music_svc.pick_track()
+            music_credit = music_svc.attribution(music_track)
+            if music_credit:
+                update_job(job_id, music_credit=music_credit)
         _stage(job_id, 80, "rendering video")
         video_path = compose_svc.compose_video(
             job_id, bg_spec, narration_path, words, w, h,
             style=req.captions, font=font_path(req.language),
-            with_music=req.music, music_volume=req.music_volume,
+            with_music=req.music, music_volume=req.music_volume, music_track=music_track,
         )
         video_url = f"/api/videos/{job_id}/download"
         update_job(job_id, video_url=video_url)

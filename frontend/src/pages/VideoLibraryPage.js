@@ -183,10 +183,16 @@ const PublishModal = ({ job, onClose, onDone }) => {
           <option value="private">PRIVATE</option>
         </select>
 
-        <label className="flex items-center gap-3 cursor-pointer mb-4">
+        <label className="flex items-center gap-3 cursor-pointer mb-3">
           <input type="checkbox" checked={optimize} onChange={(e) => setOptimize(e.target.checked)} className="w-5 h-5 border-3 border-black" />
           <span className="font-black uppercase text-sm">Re-optimize with AI before upload</span>
         </label>
+
+        {job.music_credit && (
+          <div className="border-2 border-black bg-[#FFE66D] p-2 mb-4 text-xs font-bold">
+            🎵 Music credit auto-added to description:<br />{job.music_credit}
+          </div>
+        )}
 
         <button onClick={submit} disabled={submitting}
           className="brutal-button bg-black text-white w-full h-14 text-xl disabled:opacity-50 flex items-center justify-center">
