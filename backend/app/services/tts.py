@@ -10,11 +10,12 @@ import logging
 from pathlib import Path
 from typing import Optional
 
-from ..config import settings
+from ..config import settings, PIPER_DIR
 
 logger = logging.getLogger(__name__)
 
-_kokoro = None  # lazy singleton — model load is expensive
+_kokoro = None       # lazy singleton — model load is expensive
+_piper = {}          # lazy cache keyed by voice id
 
 
 # --- edge ---
@@ -60,6 +61,27 @@ def _kokoro_tts(text: str, voice: str, lang: str, out_path: Path) -> Path:
     return wav_path
 
 
+# --- piper ---
+def _get_piper(voice: str):
+    if voice not in _piper:
+        from piper import PiperVoice
+        model = PIPER_DIR / f"{voice}.onnx"
+        if not model.exists():
+            raise RuntimeError(f"Piper voice '{voice}' not found in {PIPER_DIR}")
+        logger.info("Loading Piper voice: %s", voice)
+        _piper[voice] = PiperVoice.load(str(model))
+    return _piper[voice]
+
+
+def _piper_tts(text: str, voice: str, out_path: Path) -> Path:
+    import wave
+    wav_path = out_path.with_suffix(".wav")
+    with wave.open(str(wav_path), "wb") as wf:
+        _get_piper(voice).synthesize_wav(text, wf)
+    logger.info("Piper voiceover: %s (%s)", wav_path.name, voice)
+    return wav_path
+
+
 # --- public ---
 def synthesize(text: str, out_path: Path, engine: Optional[str] = None,
                voice: Optional[str] = None, language: str = "en") -> Path:
@@ -67,6 +89,9 @@ def synthesize(text: str, out_path: Path, engine: Optional[str] = None,
     from ..languages import get
     engine = engine or settings.TTS_ENGINE
     lang = get(language)
+
+    if engine == "piper":
+        return _piper_tts(text, voice or lang.get("piper") or "en_US-ryan-medium", out_path)
 
     if engine == "kokoro":
         if not lang["kokoro_lang"]:

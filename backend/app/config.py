@@ -15,6 +15,7 @@ FONTS_DIR = ASSETS_DIR / "fonts"
 BACKGROUNDS_DIR = ASSETS_DIR / "backgrounds"      # user-supplied gameplay/loops
 MUSIC_DIR = ASSETS_DIR / "music"
 MODELS_DIR = ASSETS_DIR / "models"                # kokoro onnx + voices
+PIPER_DIR = ASSETS_DIR / "piper_voices"           # piper per-voice onnx models
 OUTPUT_DIR = BACKEND_DIR / "generated_videos"
 WORK_DIR = BACKEND_DIR / "temp_media"              # scratch: audio, clips, frames
 DB_PATH = BACKEND_DIR / "scriptscene.db"

@@ -18,9 +18,10 @@ SCRIPT_FONTS = {
 # out in the correct native script (e.g. Devanagari for Hindi, not Urdu/boxes).
 LANGUAGES = {
     "en": dict(name="English",            whisper="en", kokoro_lang="en-us",
-               kokoro="am_michael", script="latin", prompt="English"),
+               kokoro="am_michael", piper="en_US-ryan-medium",
+               script="latin", prompt="English"),
     "hi": dict(name="Hindi",              whisper="hi", kokoro_lang="hi",
-               kokoro="hm_omega", script="devanagari",
+               kokoro="hm_omega", piper="hi_IN-pratham-medium", script="devanagari",
                prompt="Hindi in its native Devanagari script — not romanized/transliterated"),
     "es": dict(name="Spanish",            whisper="es", kokoro_lang="es",
                kokoro="em_alex", script="latin", prompt="Spanish"),

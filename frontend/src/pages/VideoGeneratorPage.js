@@ -25,44 +25,69 @@ const NICHES = [
 ];
 
 // Kokoro voices grouped by language.
+const ENGINES = [
+  { value: 'kokoro', label: 'KOKORO (NATURAL)' },
+  { value: 'piper', label: 'PIPER (LIGHT)' },
+];
+
+// VOICES[engine][language]
 const VOICES = {
-  en: [
-    { value: 'am_michael', label: 'MICHAEL (M, US)' },
-    { value: 'am_adam', label: 'ADAM (M, US)' },
-    { value: 'am_onyx', label: 'ONYX (M, US)' },
-    { value: 'am_puck', label: 'PUCK (M, US)' },
-    { value: 'af_heart', label: 'HEART (F, US)' },
-    { value: 'af_bella', label: 'BELLA (F, US)' },
-    { value: 'af_nicole', label: 'NICOLE (F, US)' },
-    { value: 'af_sky', label: 'SKY (F, US)' },
-    { value: 'bm_george', label: 'GEORGE (M, UK)' },
-    { value: 'bm_lewis', label: 'LEWIS (M, UK)' },
-    { value: 'bf_emma', label: 'EMMA (F, UK)' },
-    { value: 'bf_isabella', label: 'ISABELLA (F, UK)' },
-  ],
-  hi: [
-    { value: 'hm_omega', label: 'OMEGA (M)' },
-    { value: 'hm_psi', label: 'PSI (M)' },
-    { value: 'hf_alpha', label: 'ALPHA (F)' },
-    { value: 'hf_beta', label: 'BETA (F)' },
-  ],
-  es: [
-    { value: 'em_alex', label: 'ALEX (M)' },
-    { value: 'em_santa', label: 'SANTA (M)' },
-    { value: 'ef_dora', label: 'DORA (F)' },
-  ],
-  fr: [
-    { value: 'ff_siwis', label: 'SIWIS (F)' },
-  ],
-  pt: [
-    { value: 'pm_alex', label: 'ALEX (M)' },
-    { value: 'pm_santa', label: 'SANTA (M)' },
-    { value: 'pf_dora', label: 'DORA (F)' },
-  ],
-  it: [
-    { value: 'im_nicola', label: 'NICOLA (M)' },
-    { value: 'if_sara', label: 'SARA (F)' },
-  ],
+  kokoro: {
+    en: [
+      { value: 'am_michael', label: 'MICHAEL (M, US)' },
+      { value: 'am_adam', label: 'ADAM (M, US)' },
+      { value: 'am_onyx', label: 'ONYX (M, US)' },
+      { value: 'am_puck', label: 'PUCK (M, US)' },
+      { value: 'af_heart', label: 'HEART (F, US)' },
+      { value: 'af_bella', label: 'BELLA (F, US)' },
+      { value: 'af_nicole', label: 'NICOLE (F, US)' },
+      { value: 'af_sky', label: 'SKY (F, US)' },
+      { value: 'bm_george', label: 'GEORGE (M, UK)' },
+      { value: 'bm_lewis', label: 'LEWIS (M, UK)' },
+      { value: 'bf_emma', label: 'EMMA (F, UK)' },
+      { value: 'bf_isabella', label: 'ISABELLA (F, UK)' },
+    ],
+    hi: [
+      { value: 'hm_omega', label: 'OMEGA (M)' },
+      { value: 'hm_psi', label: 'PSI (M)' },
+      { value: 'hf_alpha', label: 'ALPHA (F)' },
+      { value: 'hf_beta', label: 'BETA (F)' },
+    ],
+    es: [
+      { value: 'em_alex', label: 'ALEX (M)' },
+      { value: 'em_santa', label: 'SANTA (M)' },
+      { value: 'ef_dora', label: 'DORA (F)' },
+    ],
+    fr: [{ value: 'ff_siwis', label: 'SIWIS (F)' }],
+    pt: [
+      { value: 'pm_alex', label: 'ALEX (M)' },
+      { value: 'pm_santa', label: 'SANTA (M)' },
+      { value: 'pf_dora', label: 'DORA (F)' },
+    ],
+    it: [
+      { value: 'im_nicola', label: 'NICOLA (M)' },
+      { value: 'if_sara', label: 'SARA (F)' },
+    ],
+  },
+  piper: {
+    en: [
+      { value: 'en_US-ryan-medium', label: 'RYAN (M, US)' },
+      { value: 'en_US-joe-medium', label: 'JOE (M, US)' },
+      { value: 'en_US-hfc_male-medium', label: 'HFC MALE (M, US)' },
+      { value: 'en_US-bryce-medium', label: 'BRYCE (M, US)' },
+      { value: 'en_GB-alan-medium', label: 'ALAN (M, UK)' },
+      { value: 'en_US-amy-medium', label: 'AMY (F, US)' },
+      { value: 'en_US-hfc_female-medium', label: 'HFC FEMALE (F, US)' },
+      { value: 'en_US-kristin-medium', label: 'KRISTIN (F, US)' },
+      { value: 'en_GB-alba-medium', label: 'ALBA (F, UK)' },
+      { value: 'en_GB-jenny_dioco-medium', label: 'JENNY (F, UK)' },
+    ],
+    hi: [
+      { value: 'hi_IN-pratham-medium', label: 'PRATHAM (M)' },
+      { value: 'hi_IN-rohan-medium', label: 'ROHAN (M)' },
+      { value: 'hi_IN-priyamvada-medium', label: 'PRIYAMVADA (F)' },
+    ],
+  },
 };
 
 const BACKGROUNDS = [
@@ -97,8 +122,9 @@ const VideoGeneratorPage = () => {
   const [niche, setNiche] = useState('scary');
   const [language, setLanguage] = useState('en');
 
-  // voice (Kokoro, per language)
-  const [voice, setVoice] = useState(VOICES.en[0].value);
+  // voice (engine + language)
+  const [engine, setEngine] = useState('kokoro');
+  const [voice, setVoice] = useState(VOICES.kokoro.en[0].value);
 
   // background
   const [bgType, setBgType] = useState('broll');
@@ -130,8 +156,9 @@ const VideoGeneratorPage = () => {
   const [youtubeUrl, setYoutubeUrl] = useState(null);
   const [title, setTitle] = useState('');
 
-  // keep voice valid when language switches
-  useEffect(() => { setVoice(VOICES[language][0].value); }, [language]);
+  // keep voice valid when engine or language switches
+  const voiceList = (VOICES[engine] && VOICES[engine][language]) || [];
+  useEffect(() => { setVoice(voiceList[0]?.value || ''); }, [engine, language]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (jobId && isGenerating) {
@@ -171,7 +198,7 @@ const VideoGeneratorPage = () => {
     const payload = {
       niche,
       language,
-      tts_engine: 'kokoro',
+      tts_engine: engine,
       voice,
       background_type: bgType,
       aspect,
@@ -259,11 +286,25 @@ const VideoGeneratorPage = () => {
             {/* Voice */}
             <div className="brutal-card bg-[#FF6B6B] p-6">
               <h3 className="text-xl font-black uppercase flex items-center gap-2 mb-3"><Mic className="h-5 w-5" /> VOICE</h3>
-              <Field label="Voice (Kokoro)">
-                <select value={voice} onChange={(e) => setVoice(e.target.value)} className={sel}>
-                  {VOICES[language].map((v) => <option key={v.value} value={v.value}>{v.label}</option>)}
-                </select>
+              <Field label="Engine">
+                <div className="flex gap-2">
+                  {ENGINES.map((e) => (
+                    <button key={e.value} onClick={() => setEngine(e.value)}
+                      className={`brutal-button flex-1 py-2 text-sm ${engine === e.value ? 'bg-black text-white' : 'bg-white text-black'}`}>
+                      {e.label}
+                    </button>
+                  ))}
+                </div>
               </Field>
+              {voiceList.length > 0 ? (
+                <Field label="Voice">
+                  <select value={voice} onChange={(e) => setVoice(e.target.value)} className={sel}>
+                    {voiceList.map((v) => <option key={v.value} value={v.value}>{v.label}</option>)}
+                  </select>
+                </Field>
+              ) : (
+                <p className="text-sm font-bold mt-2">No PIPER voices for this language yet — switch to Kokoro.</p>
+              )}
             </div>
 
             {/* Background */}
@@ -362,7 +403,7 @@ const VideoGeneratorPage = () => {
               </label>
             </div>
 
-            <button onClick={handleGenerate} disabled={isGenerating || !validSource()}
+            <button onClick={handleGenerate} disabled={isGenerating || !validSource() || voiceList.length === 0}
               className="brutal-button w-full h-20 bg-black text-white disabled:opacity-50 text-2xl">
               {isGenerating
                 ? <><Loader2 className="mr-3 h-7 w-7 animate-spin inline" /> GENERATING...</>

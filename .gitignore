@@ -102,3 +102,7 @@ frontend/node_modules/.cache/default-development/0.pack
 # kokoro model files (large, downloaded)
 backend/assets/models/*
 !backend/assets/models/.gitkeep
+
+# piper voice models (large, downloaded)
+backend/assets/piper_voices/*
+!backend/assets/piper_voices/.gitkeep
