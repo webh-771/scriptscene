@@ -87,6 +87,36 @@ def generate_content(topic: str, niche: str = "scary", language: str = "English"
     return data
 
 
+def scene_keywords(script: str, count: int = 5) -> list:
+    """Extract concrete, filmable b-roll search phrases that visually match the
+    narration — so stock footage fits the script instead of the generic niche."""
+    prompt = (
+        f"Narration:\n{script[:1800]}\n\n"
+        f"Give {count} short stock-video search phrases (1-3 words each) for b-roll "
+        "that visually matches this narration. Use CONCRETE, filmable scenes/objects "
+        "(e.g. 'dark forest', 'city traffic night', 'ocean waves') — never abstract "
+        "ideas. Order them to follow the narration. "
+        'Return STRICT JSON: {"keywords": ["...", "..."]}.'
+    )
+    try:
+        resp = _client().chat.completions.create(
+            model=settings.GROQ_MODEL,
+            messages=[
+                {"role": "system", "content": "You pick visual b-roll search terms for narrated videos."},
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.6,
+            response_format={"type": "json_object"},
+        )
+        kws = json.loads(resp.choices[0].message.content).get("keywords", [])
+        kws = [str(k).strip() for k in kws if str(k).strip()][:count]
+        logger.info("Scene keywords: %s", kws)
+        return kws
+    except Exception as e:  # noqa: BLE001
+        logger.warning("scene_keywords failed: %s", e)
+        return []
+
+
 _SEO_SYSTEM = (
     "You are a YouTube SEO expert for faceless short-form channels. Optimize "
     "metadata for maximum reach and click-through. Titles are punchy and "

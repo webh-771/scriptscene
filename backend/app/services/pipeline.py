@@ -48,7 +48,12 @@ def _resolve_content(req: GenerateRequest) -> dict:
 def _resolve_background(job_id: str, req: GenerateRequest, content: dict) -> dict:
     spec = {"type": req.background_type}
     if req.background_type in ("broll", "gameplay"):
-        query = req.background_query or content.get("background_query") or req.niche
+        if req.background_query:
+            query = req.background_query           # explicit user override
+        else:
+            # derive scene keywords from the actual script so footage matches it
+            query = story_svc.scene_keywords(content["script"]) \
+                or content.get("background_query") or req.niche
         spec["paths"] = bg_svc.resolve_backgrounds(job_id, query, req.background_file)
     elif req.background_type == "gradient":
         spec["gradient"] = req.gradient

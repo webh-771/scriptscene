@@ -72,9 +72,11 @@ def _download(url: str, tag: str) -> Path:
     return dest
 
 
-def resolve_backgrounds(job_id: str, query: str, prefer_file: Optional[str] = None,
+def resolve_backgrounds(job_id: str, query, prefer_file: Optional[str] = None,
                         count: int = 5) -> List[Path]:
     """Return a LIST of background clips to cut between (keeps interest).
+    `query` may be a single string OR a list of scene keywords — when it's a
+    list, one clip is fetched per keyword so the footage tracks the narration.
     Priority: explicit file -> local files -> royalty-free b-roll fetch."""
     if prefer_file:
         p = BACKGROUNDS_DIR / prefer_file
@@ -89,17 +91,37 @@ def resolve_backgrounds(job_id: str, query: str, prefer_file: Optional[str] = No
         logger.info("Using %d local background(s)", min(count, len(locals_)))
         return locals_[:count]
 
-    for fetcher in (_fetch_pexels, _fetch_pixabay):
-        try:
-            got = fetcher(query, job_id, count)
-            if got:
-                logger.info("Fetched %d royalty-free clips for '%s' via %s",
-                            len(got), query, fetcher.__name__)
-                return got
-        except Exception as e:  # noqa: BLE001
-            logger.warning("%s failed: %s", fetcher.__name__, e)
+    queries = [q for q in (query if isinstance(query, list) else [query]) if q]
+    if not queries:
+        queries = ["abstract motion"]
+
+    # One clip per keyword (so footage matches the narration), then top up to
+    # `count` from the first keyword if a list was short.
+    clips: List[Path] = []
+    seen_idx = 0
+    pool = queries if len(queries) >= count else queries + [queries[0]] * (count - len(queries))
+    for q in pool[:count]:
+        got = _fetch_one(q, f"{job_id}_{seen_idx}")
+        seen_idx += 1
+        if got:
+            clips.append(got)
+    if clips:
+        logger.info("Fetched %d clips for keywords: %s", len(clips), queries)
+        return clips
 
     raise RuntimeError(
         "No background available: add a video to assets/backgrounds/ "
         "or set PEXELS_API_KEY / PIXABAY_API_KEY"
     )
+
+
+def _fetch_one(query: str, tag: str) -> Optional[Path]:
+    """Fetch a single clip for one keyword via Pexels then Pixabay."""
+    for fetcher in (_fetch_pexels, _fetch_pixabay):
+        try:
+            got = fetcher(query, tag, 1)
+            if got:
+                return got[0]
+        except Exception as e:  # noqa: BLE001
+            logger.warning("%s failed for '%s': %s", fetcher.__name__, query, e)
+    return None
