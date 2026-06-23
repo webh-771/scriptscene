@@ -145,6 +145,7 @@ const VideoGeneratorPage = () => {
   const [uppercase, setUppercase] = useState(true);
 
   const [music, setMusic] = useState(true);
+  const [musicVolume, setMusicVolume] = useState(0.12);
   const [publishYoutube, setPublishYoutube] = useState(false);
 
   // job
@@ -203,6 +204,7 @@ const VideoGeneratorPage = () => {
       background_type: bgType,
       aspect,
       music,
+      music_volume: Number(musicVolume),
       publish_youtube: publishYoutube,
       captions: {
         preset, position, words_per_chunk: Number(wordsPerChunk),
@@ -397,6 +399,14 @@ const VideoGeneratorPage = () => {
                 <input type="checkbox" checked={music} onChange={(e) => setMusic(e.target.checked)} className="w-5 h-5 border-3 border-black" />
                 <span className="font-black uppercase text-sm">BACKGROUND MUSIC</span>
               </label>
+              {music && (
+                <div className="mt-2">
+                  <Field label={`Music volume: ${Math.round(musicVolume * 100)}%`}>
+                    <input type="range" min="0" max="0.5" step="0.02" value={musicVolume}
+                      onChange={(e) => setMusicVolume(e.target.value)} className="w-full" />
+                  </Field>
+                </div>
+              )}
               <label className="flex items-center gap-3 cursor-pointer mt-2">
                 <input type="checkbox" checked={publishYoutube} onChange={(e) => setPublishYoutube(e.target.checked)} className="w-5 h-5 border-3 border-black" />
                 <span className="font-black uppercase text-sm flex items-center gap-2"><Youtube className="h-4 w-4" /> AUTO-UPLOAD TO YOUTUBE</span>

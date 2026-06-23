@@ -40,6 +40,7 @@ class GenerateRequest(BaseModel):
     aspect: str = "9:16"                         # 9:16 | 1:1 | 16:9
     captions: CaptionStyle = Field(default_factory=CaptionStyle)
     music: bool = True
+    music_volume: float = Field(default=0.12, ge=0.0, le=1.0)   # relative to narration
 
     publish_youtube: bool = False
 

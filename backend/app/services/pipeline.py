@@ -12,6 +12,7 @@ from . import reddit as reddit_svc
 from . import tts as tts_svc
 from . import captions as captions_svc
 from . import background as bg_svc
+from . import music as music_svc
 from . import compose as compose_svc
 from .publishers import youtube as yt_svc
 
@@ -85,11 +86,14 @@ def run_pipeline(job_id: str, req: GenerateRequest) -> None:
         _stage(job_id, 65, "preparing background")
         bg_spec = _resolve_background(job_id, req, content)
 
-        # 5. Compose
+        # 5. Compose (auto-fetch copyright-free music if library is empty)
+        if req.music and req.music_volume > 0:
+            music_svc.ensure_music(req.niche)
         _stage(job_id, 80, "rendering video")
         video_path = compose_svc.compose_video(
             job_id, bg_spec, narration_path, words, w, h,
-            style=req.captions, font=font_path(req.language), with_music=req.music,
+            style=req.captions, font=font_path(req.language),
+            with_music=req.music, music_volume=req.music_volume,
         )
         video_url = f"/api/videos/{job_id}/download"
         update_job(job_id, video_url=video_url)

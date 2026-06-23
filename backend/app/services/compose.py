@@ -75,6 +75,7 @@ def compose_video(
     style=None,
     font=None,
     with_music: bool = True,
+    music_volume: float = 0.12,
 ) -> Path:
     from moviepy import AudioFileClip, CompositeVideoClip, CompositeAudioClip
 
@@ -90,10 +91,10 @@ def compose_video(
 
     # Audio: narration + optional ducked background music
     audio = narration
-    if with_music:
+    if with_music and music_volume > 0:
         track = _pick_music()
         if track:
-            music = AudioFileClip(str(track)).with_volume_scaled(0.12)
+            music = AudioFileClip(str(track)).with_volume_scaled(music_volume)
             if music.duration < duration:
                 music = music.with_duration(music.duration)  # keep as-is; short music ok
             else:

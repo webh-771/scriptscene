@@ -53,6 +53,10 @@ class Settings:
     PEXELS_API_KEY = os.environ.get("PEXELS_API_KEY", "")
     PIXABAY_API_KEY = os.environ.get("PIXABAY_API_KEY", "")
 
+    # Copyright-free music (Jamendo, CC-BY/CC-BY-SA). 2c9a11b9 is Jamendo's shared
+    # demo key — fine for testing; get a free one at devportal.jamendo.com.
+    JAMENDO_CLIENT_ID = os.environ.get("JAMENDO_CLIENT_ID", "2c9a11b9")
+
     # YouTube upload
     YT_CLIENT_ID = os.environ.get("YT_CLIENT_ID", "")
     YT_CLIENT_SECRET = os.environ.get("YT_CLIENT_SECRET", "")
