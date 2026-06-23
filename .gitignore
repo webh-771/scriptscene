@@ -76,6 +76,12 @@ agenthub/agents/youtube/db
 # Build caches
 .cache/
 
+# Generated runtime artifacts (keep dirs via .gitkeep)
+backend/audio_files/*
+backend/generated_videos/*
+backend/temp_media/*
+!backend/**/.gitkeep
+
 # Mobile development
 android-sdk/ frontend/node_modules/.cache/default-development/3.pack
 frontend/node_modules/.cache/default-development/3.pack
