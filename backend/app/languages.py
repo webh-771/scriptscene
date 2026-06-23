@@ -13,25 +13,23 @@ SCRIPT_FONTS = {
 
 # code -> config. kokoro_lang/kokoro_voice are None when Kokoro lacks that language
 # (the pipeline then forces the edge engine).
+# `prompt` is the exact phrasing handed to the LLM for the script language.
+# Non-English uses the bigger whisper model (see pipeline) so the captions come
+# out in the correct native script (e.g. Devanagari for Hindi, not Urdu/boxes).
 LANGUAGES = {
-    "en": dict(name="English",    edge="en-US-AndrewNeural",  whisper="en",
-               kokoro_lang="en-us", kokoro="am_michael", script="latin"),
-    "hi": dict(name="Hindi",      edge="hi-IN-MadhurNeural",  whisper="hi",
-               kokoro_lang="hi",    kokoro="hm_omega",   script="devanagari"),
-    "es": dict(name="Spanish",    edge="es-ES-AlvaroNeural",  whisper="es",
-               kokoro_lang="es",    kokoro="em_alex",    script="latin"),
-    "fr": dict(name="French",     edge="fr-FR-HenriNeural",   whisper="fr",
-               kokoro_lang="fr-fr", kokoro="ff_siwis",   script="latin"),
-    "de": dict(name="German",     edge="de-DE-ConradNeural",  whisper="de",
-               kokoro_lang=None,    kokoro=None,         script="latin"),
-    "pt": dict(name="Portuguese", edge="pt-BR-AntonioNeural", whisper="pt",
-               kokoro_lang="pt-br", kokoro="pm_alex",    script="latin"),
-    "it": dict(name="Italian",    edge="it-IT-DiegoNeural",   whisper="it",
-               kokoro_lang="it",    kokoro="im_nicola",  script="latin"),
-    "ja": dict(name="Japanese",   edge="ja-JP-KeitaNeural",   whisper="ja",
-               kokoro_lang="ja",    kokoro="jm_kumo",    script="cjk"),
-    "ar": dict(name="Arabic",     edge="ar-SA-HamedNeural",   whisper="ar",
-               kokoro_lang=None,    kokoro=None,         script="arabic"),
+    "en": dict(name="English",            whisper="en", kokoro_lang="en-us",
+               kokoro="am_michael", script="latin", prompt="English"),
+    "hi": dict(name="Hindi",              whisper="hi", kokoro_lang="hi",
+               kokoro="hm_omega", script="devanagari",
+               prompt="Hindi in its native Devanagari script — not romanized/transliterated"),
+    "es": dict(name="Spanish",            whisper="es", kokoro_lang="es",
+               kokoro="em_alex", script="latin", prompt="Spanish"),
+    "fr": dict(name="French",             whisper="fr", kokoro_lang="fr-fr",
+               kokoro="ff_siwis", script="latin", prompt="French"),
+    "pt": dict(name="Portuguese",         whisper="pt", kokoro_lang="pt-br",
+               kokoro="pm_alex", script="latin", prompt="Portuguese"),
+    "it": dict(name="Italian",            whisper="it", kokoro_lang="it",
+               kokoro="im_nicola", script="latin", prompt="Italian"),
 }
 
 DEFAULT = "en"

@@ -22,7 +22,9 @@ _SYSTEM = (
     "You write scripts for faceless vertical short-form videos (YouTube Shorts / Reels). "
     "Output must be ORIGINAL, copyright-free, and spoken-word friendly. "
     "Hook the viewer in the first sentence. No stage directions, no emojis in the script body, "
-    "no markdown. 110-160 words, ~40-55 seconds when read aloud."
+    "no markdown. The script MUST run AT LEAST 60 seconds when read aloud — roughly "
+    "190-240 words. Never write less than a minute of narration; keep the tension/value "
+    "going the whole way through with a strong payoff at the end."
 )
 
 
@@ -34,13 +36,13 @@ def _client():
 
 
 def generate_content(topic: str, niche: str = "scary", language: str = "English") -> dict:
-    """Return {script, title, description, hashtags, background_query}."""
+    """Return {script, title, description, hashtags, background_query}.
+    `language` is the full instruction phrase for the script language."""
     style = _NICHE_HINTS.get(niche, _NICHE_HINTS["scary"])
     prompt = (
         f"Topic: {topic}\nStyle: {style}\n"
-        f"Write the script AND title in {language} using its NATIVE SCRIPT "
-        f"(e.g. Devanagari for Hindi, Arabic script for Arabic) — never romanized/"
-        f"transliterated. Natural, native {language}, not translated-sounding. "
+        f"Write the script AND title in {language}. Natural and idiomatic, "
+        f"not translated-sounding. At least 60 seconds of narration (~190-240 words). "
         f"Keep hashtags and background_query in English.\n\n"
         "Return STRICT JSON with keys: "
         "script (string, the narration only), "

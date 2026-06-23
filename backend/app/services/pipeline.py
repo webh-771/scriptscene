@@ -39,8 +39,8 @@ def _resolve_content(req: GenerateRequest) -> dict:
             "background_query": req.niche,
         }
     if req.topic:
-        lang_name = get_lang(req.language)["name"]
-        return story_svc.generate_content(req.topic, req.niche, language=lang_name)
+        lang_prompt = get_lang(req.language)["prompt"]
+        return story_svc.generate_content(req.topic, req.niche, language=lang_prompt)
     raise RuntimeError("Provide one of: topic, reddit_url, or script")
 
 
@@ -74,8 +74,12 @@ def run_pipeline(job_id: str, req: GenerateRequest) -> None:
 
         # 3. Word-level caption timing
         _stage(job_id, 50, "timing captions")
+        # English uses the fast 'base' model; every other language (incl. romanized
+        # Hindi) uses the bigger 'small' model for accuracy.
+        model_name = "base" if req.language == "en" else "small"
         words = captions_svc.transcribe_words(
-            narration_path, language=get_lang(req.language)["whisper"])
+            narration_path, language=get_lang(req.language)["whisper"],
+            model_name=model_name)
 
         # 4. Background
         _stage(job_id, 65, "preparing background")

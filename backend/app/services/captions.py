@@ -26,17 +26,12 @@ def _get_model(name: str):
     return _models[name]
 
 
-def _model_for(language: str) -> str:
-    # base is fast and fine for English; non-English (esp. Hindi/Urdu) needs a
-    # bigger model to get the correct native script instead of boxes.
-    if language and language != "en":
-        return settings.WHISPER_MODEL_MULTILINGUAL
-    return settings.WHISPER_MODEL
-
-
-def transcribe_words(audio_path: Path, language: str = None) -> List[Dict]:
-    """Return [{word, start, end}, ...] with timestamps in seconds."""
-    segments, _ = _get_model(_model_for(language)).transcribe(
+def transcribe_words(audio_path: Path, language: str = None,
+                     model_name: str = None) -> List[Dict]:
+    """Return [{word, start, end}, ...] with timestamps in seconds.
+    `language` is the whisper decoding hint; `model_name` picks the model size."""
+    name = model_name or settings.WHISPER_MODEL
+    segments, _ = _get_model(name).transcribe(
         str(audio_path), word_timestamps=True, language=language)
     words: List[Dict] = []
     for seg in segments:
