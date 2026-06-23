@@ -51,6 +51,12 @@ def get_job(job_id: str) -> Optional[dict]:
     return json.loads(row[0]) if row else None
 
 
+def delete_job(job_id: str) -> bool:
+    with _lock, _conn() as c:
+        cur = c.execute("DELETE FROM jobs WHERE id = ?", (job_id,))
+        return cur.rowcount > 0
+
+
 def list_jobs(limit: int = 100) -> list:
     with _conn() as c:
         rows = c.execute("SELECT data FROM jobs").fetchall()

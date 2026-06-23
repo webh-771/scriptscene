@@ -4,8 +4,8 @@ import uuid
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 from fastapi.responses import FileResponse
 
-from ..config import OUTPUT_DIR
-from ..db import create_job, get_job, list_jobs
+from ..config import OUTPUT_DIR, WORK_DIR
+from ..db import create_job, get_job, list_jobs, delete_job as db_delete_job
 from ..models import GenerateRequest, GenerateResponse, JobStatus
 from ..services.pipeline import run_pipeline
 
@@ -40,3 +40,15 @@ async def download(job_id: str):
 @router.get("")
 async def projects():
     return list_jobs()
+
+
+@router.delete("/{job_id}")
+async def delete(job_id: str):
+    if not get_job(job_id):
+        raise HTTPException(404, "Job not found")
+    # remove the rendered video + any scratch files for this job
+    (OUTPUT_DIR / f"{job_id}.mp4").unlink(missing_ok=True)
+    for f in WORK_DIR.glob(f"{job_id}*"):
+        f.unlink(missing_ok=True)
+    db_delete_job(job_id)
+    return {"deleted": job_id}

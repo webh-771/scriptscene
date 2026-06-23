@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowLeft, Download, Youtube, Loader2, Sparkles, X, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Download, Youtube, Loader2, Sparkles, X, Trash2 } from 'lucide-react';
 import axios from 'axios';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -58,7 +58,7 @@ const JobsPage = () => {
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {jobs.map((j) => (
-              <JobCard key={j.job_id} job={j} onPublish={() => setPublishJob(j)} />
+              <JobCard key={j.job_id} job={j} onPublish={() => setPublishJob(j)} onDelete={fetchJobs} />
             ))}
           </div>
         )}
@@ -71,9 +71,14 @@ const JobsPage = () => {
   );
 };
 
-const JobCard = ({ job, onPublish }) => {
+const JobCard = ({ job, onPublish, onDelete }) => {
   const done = job.status === 'done';
   const up = job.upload_status;
+  const remove = async () => {
+    if (!window.confirm('Delete this job and its video?')) return;
+    try { await axios.delete(`${API}/videos/${job.job_id}`); toast.success('Deleted'); onDelete(); }
+    catch (e) { toast.error('Delete failed'); }
+  };
   return (
     <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
       className="brutal-card bg-white p-4">
@@ -81,7 +86,12 @@ const JobCard = ({ job, onPublish }) => {
         <span className={`px-2 py-1 text-xs font-black uppercase border-2 border-black ${STATUS_COLOR[job.status] || 'bg-white'}`}>
           {job.status}{job.status === 'running' ? ` ${job.progress}%` : ''}
         </span>
-        {up && <span className="text-xs font-black uppercase">{up === 'uploaded' ? '✓ ON YT' : `YT: ${up}`}</span>}
+        <div className="flex items-center gap-2">
+          {up && <span className="text-xs font-black uppercase">{up === 'uploaded' ? '✓ ON YT' : `YT: ${up}`}</span>}
+          <button onClick={remove} title="Delete" className="border-2 border-black bg-[#FF6B6B] p-1 hover:bg-[#ff4f4f]">
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
       </div>
       <p className="font-black text-sm mb-3 line-clamp-2">{job.title || job.topic || 'Untitled'}</p>
 
