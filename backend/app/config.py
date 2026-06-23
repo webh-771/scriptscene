@@ -14,6 +14,7 @@ ASSETS_DIR = BACKEND_DIR / "assets"
 FONTS_DIR = ASSETS_DIR / "fonts"
 BACKGROUNDS_DIR = ASSETS_DIR / "backgrounds"      # user-supplied gameplay/loops
 MUSIC_DIR = ASSETS_DIR / "music"
+MODELS_DIR = ASSETS_DIR / "models"                # kokoro onnx + voices
 OUTPUT_DIR = BACKEND_DIR / "generated_videos"
 WORK_DIR = BACKEND_DIR / "temp_media"              # scratch: audio, clips, frames
 DB_PATH = BACKEND_DIR / "scriptscene.db"
@@ -31,8 +32,14 @@ class Settings:
     GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
     GROQ_MODEL = os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile")
 
-    # TTS (Andrew/Ava/Emma/Brian = newer conversational voices, most natural)
+    # TTS engine: "edge" (cloud, free, no key) or "kokoro" (local, most natural)
+    TTS_ENGINE = os.environ.get("TTS_ENGINE", "edge")
+    # edge voice (Andrew/Ava/Emma/Brian = most natural conversational set)
     TTS_VOICE = os.environ.get("TTS_VOICE", "en-US-AndrewNeural")
+    # kokoro voice (am_michael, am_adam, af_heart, af_bella, bm_george, ...)
+    KOKORO_VOICE = os.environ.get("KOKORO_VOICE", "am_michael")
+    KOKORO_MODEL = MODELS_DIR / "kokoro-v1.0.onnx"
+    KOKORO_VOICES = MODELS_DIR / "voices-v1.0.bin"
 
     # Captions
     WHISPER_MODEL = os.environ.get("WHISPER_MODEL", "base")
@@ -49,11 +56,20 @@ class Settings:
     YT_REFRESH_TOKEN = os.environ.get("YT_REFRESH_TOKEN", "")
 
     # Video format
-    WIDTH = int(os.environ.get("VIDEO_WIDTH", "1080"))
-    HEIGHT = int(os.environ.get("VIDEO_HEIGHT", "1920"))
     FPS = int(os.environ.get("VIDEO_FPS", "30"))
 
     CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "*").split(",")
 
 
 settings = Settings()
+
+# Aspect ratio -> (width, height). Long edge 1920 / square 1080.
+ASPECTS = {
+    "9:16": (1080, 1920),
+    "1:1": (1080, 1080),
+    "16:9": (1920, 1080),
+}
+
+
+def dims_for(aspect: str):
+    return ASPECTS.get(aspect, ASPECTS["9:16"])

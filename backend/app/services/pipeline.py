@@ -1,12 +1,13 @@
-"""Orchestrates the full generation: story -> tts -> captions -> background
--> compose -> (optional) publish. Updates job state at each stage.
+"""Orchestrates generation: source -> tts -> captions -> background -> compose
+-> (optional) publish. Updates job state at each stage.
 """
 import logging
 
-from ..config import WORK_DIR
+from ..config import WORK_DIR, dims_for
 from ..db import update_job
 from ..models import GenerateRequest
 from . import story as story_svc
+from . import reddit as reddit_svc
 from . import tts as tts_svc
 from . import captions as captions_svc
 from . import background as bg_svc
@@ -21,31 +22,67 @@ def _stage(job_id: str, progress: int, stage: str, **extra):
     logger.info("[%s] %d%% %s", job_id, progress, stage)
 
 
+def _resolve_content(req: GenerateRequest) -> dict:
+    """Produce {script, title, description, hashtags, background_query}."""
+    if req.reddit_url:
+        story = reddit_svc.fetch_story(req.reddit_url)
+        return {
+            "script": story["script"], "title": story["title"],
+            "description": "", "hashtags": [req.niche, "Shorts"],
+            "background_query": req.niche,
+        }
+    if req.script:
+        return {
+            "script": req.script, "title": req.script[:80],
+            "description": "", "hashtags": [req.niche, "Shorts"],
+            "background_query": req.niche,
+        }
+    if req.topic:
+        return story_svc.generate_content(req.topic, req.niche)
+    raise RuntimeError("Provide one of: topic, reddit_url, or script")
+
+
+def _resolve_background(job_id: str, req: GenerateRequest, content: dict) -> dict:
+    spec = {"type": req.background_type}
+    if req.background_type in ("broll", "gameplay"):
+        query = req.background_query or content.get("background_query") or req.niche
+        spec["paths"] = bg_svc.resolve_backgrounds(job_id, query, req.background_file)
+    elif req.background_type == "gradient":
+        spec["gradient"] = req.gradient
+    elif req.background_type == "solid":
+        spec["solid"] = req.solid_color
+    return spec
+
+
 def run_pipeline(job_id: str, req: GenerateRequest) -> None:
     try:
-        # 1. Original script + metadata
-        _stage(job_id, 10, "writing script")
-        content = story_svc.generate_content(req.topic, req.niche)
+        w, h = dims_for(req.aspect)
+
+        # 1. Content
+        _stage(job_id, 10, "preparing script")
+        content = _resolve_content(req)
         update_job(job_id, script=content["script"], title=content["title"])
 
         # 2. Voiceover
         _stage(job_id, 30, "generating voiceover")
-        narration_path = WORK_DIR / f"{job_id}.mp3"
-        tts_svc.synthesize(content["script"], narration_path, voice=req.voice)
+        narration_path = tts_svc.synthesize(
+            content["script"], WORK_DIR / f"{job_id}.mp3",
+            engine=req.tts_engine, voice=req.voice,
+        )
 
         # 3. Word-level caption timing
         _stage(job_id, 50, "timing captions")
         words = captions_svc.transcribe_words(narration_path)
 
-        # 4. Background(s) — multiple clips for visual variety
-        _stage(job_id, 65, "fetching backgrounds")
-        bg_query = req.background_query or content.get("background_query") or req.niche
-        background_paths = bg_svc.resolve_backgrounds(job_id, bg_query, req.background_file)
+        # 4. Background
+        _stage(job_id, 65, "preparing background")
+        bg_spec = _resolve_background(job_id, req, content)
 
         # 5. Compose
         _stage(job_id, 80, "rendering video")
         video_path = compose_svc.compose_video(
-            job_id, background_paths, narration_path, words, with_music=req.music
+            job_id, bg_spec, narration_path, words, w, h,
+            style=req.captions, with_music=req.music,
         )
         video_url = f"/api/videos/{job_id}/download"
         update_job(job_id, video_url=video_url)
@@ -62,6 +99,6 @@ def run_pipeline(job_id: str, req: GenerateRequest) -> None:
                    video_url=video_url, youtube_url=youtube_url)
         logger.info("[%s] pipeline complete", job_id)
 
-    except Exception as e:  # noqa: BLE001 — surface any failure to the job record
+    except Exception as e:  # noqa: BLE001
         logger.exception("[%s] pipeline failed", job_id)
         update_job(job_id, status="error", stage="error", error=str(e))

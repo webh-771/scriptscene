@@ -8,6 +8,7 @@ from typing import List, Optional
 
 from ..config import settings, MUSIC_DIR, OUTPUT_DIR
 from . import captions as captions_svc
+from . import visuals as visuals_svc
 
 logger = logging.getLogger(__name__)
 
@@ -49,23 +50,41 @@ def _pick_music() -> Optional[Path]:
     return random.choice(tracks) if tracks else None
 
 
+def _build_base(spec: dict, narration_path: Path, duration: float, w: int, h: int):
+    """Return (base_clip, sources_to_close) for the requested background type."""
+    btype = spec.get("type", "broll")
+    if btype in ("broll", "gameplay") and spec.get("paths"):
+        return _build_background(spec["paths"], duration, w, h)
+    if btype == "gradient":
+        return visuals_svc.gradient_clip(spec.get("gradient", "aurora"), duration, w, h), []
+    if btype == "solid":
+        return visuals_svc.solid_clip(spec.get("solid", "#101418"), duration, w, h), []
+    if btype == "audiogram":
+        return visuals_svc.audiogram_clip(narration_path, duration, w, h), []
+    # fallback: solid
+    return visuals_svc.solid_clip("#101418", duration, w, h), []
+
+
 def compose_video(
     job_id: str,
-    background_paths: List[Path],
+    bg_spec: dict,
     narration_path: Path,
     words: List[dict],
+    w: int,
+    h: int,
+    style=None,
     with_music: bool = True,
 ) -> Path:
     from moviepy import AudioFileClip, CompositeVideoClip, CompositeAudioClip
 
-    w, h, fps = settings.WIDTH, settings.HEIGHT, settings.FPS
+    fps = settings.FPS
 
     narration = AudioFileClip(str(narration_path))
     duration = narration.duration
 
-    base, bg_sources = _build_background(background_paths, duration, w, h)
+    base, bg_sources = _build_base(bg_spec, narration_path, duration, w, h)
 
-    caption_clips = captions_svc.build_caption_clips(words, w, h)
+    caption_clips = captions_svc.build_caption_clips(words, w, h, style)
     video = CompositeVideoClip([base, *caption_clips], size=(w, h)).with_duration(duration)
 
     # Audio: narration + optional ducked background music

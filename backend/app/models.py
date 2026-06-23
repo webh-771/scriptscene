@@ -3,16 +3,44 @@ from typing import Optional
 from pydantic import BaseModel, Field
 
 
+class CaptionStyle(BaseModel):
+    preset: str = "storytime"                    # named look; sets sensible defaults
+    color: str = "#FFFFFF"                       # current-word / base color
+    highlight: Optional[str] = None              # active-word accent (defaults per preset)
+    position: str = "middle"                     # top | middle | bottom
+    font_scale: float = Field(default=1.0, ge=0.5, le=2.0)
+    words_per_chunk: int = Field(default=3, ge=1, le=5)
+    stroke_width: int = Field(default=6, ge=0, le=20)
+    stroke_color: str = "#000000"
+    pill: str = "none"                           # none | filled | outline
+    uppercase: bool = True
+
+
 class GenerateRequest(BaseModel):
-    # Few inputs -> full video. Everything else is auto.
-    topic: str = Field(..., min_length=3, max_length=300,
-                       description="What the video is about, e.g. 'a creepy story about an abandoned subway station'")
-    niche: str = Field(default="scary", description="scary | motivation | facts | finance")
-    voice: Optional[str] = None                 # edge-tts voice; falls back to settings
-    background_query: Optional[str] = None      # b-roll search term; default derived from niche
-    background_file: Optional[str] = None        # filename in assets/backgrounds to use instead of b-roll
+    # --- content source (one of) ---
+    topic: Optional[str] = Field(default=None, min_length=3, max_length=300)
+    reddit_url: Optional[str] = None             # paste a Reddit post URL -> pull story
+    script: Optional[str] = None                 # bring your own script verbatim
+
+    niche: str = "scary"                         # scary | motivation | facts | finance
+
+    # --- voice ---
+    tts_engine: Optional[str] = None             # edge | kokoro (default from settings)
+    voice: Optional[str] = None                  # engine-specific voice id
+
+    # --- background ---
+    background_type: str = "broll"               # broll | gameplay | gradient | solid | audiogram
+    background_query: Optional[str] = None       # b-roll search term
+    background_file: Optional[str] = None         # specific file in assets/backgrounds
+    gradient: str = "aurora"                     # aurora | sunset | mint | violet | noir
+    solid_color: str = "#101418"
+
+    # --- format ---
+    aspect: str = "9:16"                         # 9:16 | 1:1 | 16:9
+    captions: CaptionStyle = Field(default_factory=CaptionStyle)
     music: bool = True
-    publish_youtube: bool = False               # if False -> save local only
+
+    publish_youtube: bool = False
 
 
 class GenerateResponse(BaseModel):

@@ -10,6 +10,8 @@ groq>=1.5.0                 # LLM script/caption/hashtag generation (free tier);
 edge-tts==6.1.12            # free neural TTS, no API key
 gTTS==2.5.4                 # fallback TTS
 faster-whisper==1.2.1       # word-level caption timing (local, free); pulls prebuilt av wheel
+kokoro-onnx>=0.4.9          # Kokoro-82M local TTS engine (most natural)
+soundfile>=0.12             # write kokoro wav output
 
 # --- Video assembly ---
 moviepy==2.2.1
