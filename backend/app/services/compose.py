@@ -12,27 +12,36 @@ from . import captions as captions_svc
 logger = logging.getLogger(__name__)
 
 
-def _fit_vertical(clip, duration: float, w: int, h: int):
-    """Loop/trim to `duration`, then cover-crop to exactly w x h."""
-    from moviepy import concatenate_videoclips
-
-    clip = clip.without_audio()
-
-    # Loop to cover the needed duration
-    if clip.duration < duration:
-        loops = int(duration // clip.duration) + 1
-        clip = concatenate_videoclips([clip] * loops)
-
-    # Random start window, then trim
-    max_start = max(0, clip.duration - duration)
-    start = random.uniform(0, max_start) if max_start > 0 else 0
-    clip = clip.subclipped(start, start + duration)
-
-    # Cover-crop: scale so it fills, then center-crop
+def _cover_crop(clip, w: int, h: int):
+    """Scale to fill then center-crop to exactly w x h (9:16)."""
     scale = max(w / clip.w, h / clip.h)
     clip = clip.resized((round(clip.w * scale), round(clip.h * scale)))
-    clip = clip.cropped(width=w, height=h, x_center=clip.w / 2, y_center=clip.h / 2)
-    return clip
+    return clip.cropped(width=w, height=h, x_center=clip.w / 2, y_center=clip.h / 2)
+
+
+def _build_background(paths: List[Path], duration: float, w: int, h: int,
+                      segment: float = 4.0):
+    """Stitch a varied background: cut ~`segment`s chunks, cycling through the
+    available clips (and through different parts of each) until `duration` is
+    covered. Keeps the viewer's eye moving instead of looping one shot."""
+    from moviepy import VideoFileClip, concatenate_videoclips
+
+    sources = [VideoFileClip(str(p)).without_audio() for p in paths]
+    segments = []
+    total = 0.0
+    idx = 0
+    while total < duration:
+        src = sources[idx % len(sources)]
+        seg_len = min(segment, max(1.0, src.duration))
+        max_start = max(0, src.duration - seg_len)
+        start = random.uniform(0, max_start) if max_start > 0 else 0
+        seg = src.subclipped(start, start + seg_len)
+        segments.append(_cover_crop(seg, w, h))
+        total += seg_len
+        idx += 1
+
+    bg = concatenate_videoclips(segments).subclipped(0, duration)
+    return bg, sources
 
 
 def _pick_music() -> Optional[Path]:
@@ -42,20 +51,19 @@ def _pick_music() -> Optional[Path]:
 
 def compose_video(
     job_id: str,
-    background_path: Path,
+    background_paths: List[Path],
     narration_path: Path,
     words: List[dict],
     with_music: bool = True,
 ) -> Path:
-    from moviepy import VideoFileClip, AudioFileClip, CompositeVideoClip, CompositeAudioClip
+    from moviepy import AudioFileClip, CompositeVideoClip, CompositeAudioClip
 
     w, h, fps = settings.WIDTH, settings.HEIGHT, settings.FPS
 
     narration = AudioFileClip(str(narration_path))
     duration = narration.duration
 
-    bg = VideoFileClip(str(background_path))
-    base = _fit_vertical(bg, duration, w, h)
+    base, bg_sources = _build_background(background_paths, duration, w, h)
 
     caption_clips = captions_svc.build_caption_clips(words, w, h)
     video = CompositeVideoClip([base, *caption_clips], size=(w, h)).with_duration(duration)
@@ -85,7 +93,7 @@ def compose_video(
         logger=None,
     )
 
-    for c in (narration, bg, video):
+    for c in [narration, video, *bg_sources]:
         try:
             c.close()
         except Exception:  # noqa: BLE001

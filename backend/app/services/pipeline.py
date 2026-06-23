@@ -37,15 +37,15 @@ def run_pipeline(job_id: str, req: GenerateRequest) -> None:
         _stage(job_id, 50, "timing captions")
         words = captions_svc.transcribe_words(narration_path)
 
-        # 4. Background
-        _stage(job_id, 65, "fetching background")
+        # 4. Background(s) — multiple clips for visual variety
+        _stage(job_id, 65, "fetching backgrounds")
         bg_query = req.background_query or content.get("background_query") or req.niche
-        background_path = bg_svc.resolve_background(job_id, bg_query, req.background_file)
+        background_paths = bg_svc.resolve_backgrounds(job_id, bg_query, req.background_file)
 
         # 5. Compose
         _stage(job_id, 80, "rendering video")
         video_path = compose_svc.compose_video(
-            job_id, background_path, narration_path, words, with_music=req.music
+            job_id, background_paths, narration_path, words, with_music=req.music
         )
         video_url = f"/api/videos/{job_id}/download"
         update_job(job_id, video_url=video_url)

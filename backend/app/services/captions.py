@@ -3,10 +3,13 @@ TextClips. Transcribes the generated narration to get per-word timestamps —
 the defining look of short-form story videos.
 """
 import logging
+import string
 from pathlib import Path
 from typing import List, Dict
 
 from ..config import settings, CAPTION_FONT
+
+_PUNCT = set(string.punctuation)
 
 logger = logging.getLogger(__name__)
 
@@ -39,8 +42,23 @@ def transcribe_words(audio_path: Path) -> List[Dict]:
     return words
 
 
+def _clean(words: List[Dict]) -> List[Dict]:
+    """Merge punctuation-only tokens into the previous word; strip trailing
+    punctuation from display so commas/periods don't land on their own line."""
+    out: List[Dict] = []
+    for w in words:
+        tok = w["word"].strip()
+        if tok and all(c in _PUNCT for c in tok):
+            if out:
+                out[-1]["end"] = w["end"]
+            continue
+        out.append({"word": tok.strip(string.punctuation), "start": w["start"], "end": w["end"]})
+    return [w for w in out if w["word"]]
+
+
 def group_words(words: List[Dict], per_group: int = 3) -> List[Dict]:
     """Chunk words into short on-screen groups (1-3 words at a time)."""
+    words = _clean(words)
     groups = []
     for i in range(0, len(words), per_group):
         chunk = words[i:i + per_group]
@@ -58,18 +76,19 @@ def build_caption_clips(words: List[Dict], video_w: int, video_h: int):
     """Return a list of moviepy TextClips positioned center-screen."""
     from moviepy import TextClip
 
+    box_w = int(video_w * 0.82)
     clips = []
     for g in group_words(words):
         duration = max(0.3, g["end"] - g["start"])
         txt = TextClip(
             font=str(CAPTION_FONT),
             text=g["text"],
-            font_size=int(video_w * 0.10),
+            font_size=int(video_w * 0.072),   # smaller -> wraps instead of clipping at edges
             color="white",
             stroke_color="black",
-            stroke_width=8,
-            method="caption",
-            size=(int(video_w * 0.85), None),
+            stroke_width=6,
+            method="caption",                 # wraps within size box
+            size=(box_w, None),               # fixed width, auto height
             text_align="center",
         ).with_start(g["start"]).with_duration(duration).with_position(("center", "center"))
         clips.append(txt)

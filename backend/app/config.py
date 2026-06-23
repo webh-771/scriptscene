@@ -31,8 +31,8 @@ class Settings:
     GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
     GROQ_MODEL = os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile")
 
-    # TTS
-    TTS_VOICE = os.environ.get("TTS_VOICE", "en-US-GuyNeural")
+    # TTS (Andrew/Ava/Emma/Brian = newer conversational voices, most natural)
+    TTS_VOICE = os.environ.get("TTS_VOICE", "en-US-AndrewNeural")
 
     # Captions
     WHISPER_MODEL = os.environ.get("WHISPER_MODEL", "base")

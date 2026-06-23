@@ -16,9 +16,10 @@ const NICHES = [
 ];
 
 const VOICES = [
-  { value: 'en-US-GuyNeural', label: 'GUY (M, US)' },
-  { value: 'en-US-AriaNeural', label: 'ARIA (F, US)' },
-  { value: 'en-US-ChristopherNeural', label: 'CHRISTOPHER (M, US)' },
+  { value: 'en-US-AndrewNeural', label: 'ANDREW (M, NATURAL)' },
+  { value: 'en-US-AvaNeural', label: 'AVA (F, NATURAL)' },
+  { value: 'en-US-EmmaNeural', label: 'EMMA (F, NATURAL)' },
+  { value: 'en-US-BrianNeural', label: 'BRIAN (M, NATURAL)' },
   { value: 'en-GB-RyanNeural', label: 'RYAN (M, UK)' },
 ];
 
@@ -26,7 +27,7 @@ const VideoGeneratorPage = () => {
   const navigate = useNavigate();
   const [topic, setTopic] = useState('');
   const [niche, setNiche] = useState('scary');
-  const [voice, setVoice] = useState('en-US-GuyNeural');
+  const [voice, setVoice] = useState('en-US-AndrewNeural');
   const [music, setMusic] = useState(true);
   const [publishYoutube, setPublishYoutube] = useState(false);
 
