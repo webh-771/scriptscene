@@ -91,14 +91,15 @@ def _ypos(position: str, clip_h: int, video_h: int):
     """Top-left y so text stays fully on-frame (with_position anchors top-left).
     Always clamped to a safe band so captions can never clip off-screen."""
     margin = int(video_h * 0.08)
+    bottom_margin = int(video_h * 0.14)        # extra room so subtitles never clip at the bottom
     if position == "top":
         y = margin
     elif position == "bottom":
-        y = video_h - clip_h - margin
+        y = video_h - clip_h - bottom_margin
     else:                                      # middle
         y = (video_h - clip_h) // 2
     # clamp so the whole clip (incl. stroke padding) stays on-frame
-    return max(margin, min(y, video_h - clip_h - margin))
+    return max(margin, min(y, video_h - clip_h - bottom_margin))
 
 
 def build_caption_clips(words: List[Dict], video_w: int, video_h: int, style=None,
