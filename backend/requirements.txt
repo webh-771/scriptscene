@@ -6,7 +6,7 @@ python-dotenv==1.2.1
 pydantic==2.12.5
 
 # --- Content generation (free stack) ---
-groq==0.11.0                # LLM script/caption/hashtag generation (free tier)
+groq>=1.5.0                 # LLM script/caption/hashtag generation (free tier); 1.5+ for httpx 0.28 compat
 edge-tts==6.1.12            # free neural TTS, no API key
 gTTS==2.5.4                 # fallback TTS
 faster-whisper==1.2.1       # word-level caption timing (local, free); pulls prebuilt av wheel
