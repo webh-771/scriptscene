@@ -23,6 +23,7 @@ class GenerateRequest(BaseModel):
     script: Optional[str] = None                 # bring your own script verbatim
 
     niche: str = "scary"                         # scary | motivation | facts | finance
+    language: str = "en"                         # en | hi | es | fr | de | pt | it | ja | ar
 
     # --- voice ---
     tts_engine: Optional[str] = None             # edge | kokoro (default from settings)

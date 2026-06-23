@@ -43,6 +43,8 @@ class Settings:
 
     # Captions
     WHISPER_MODEL = os.environ.get("WHISPER_MODEL", "base")
+    # bigger model for non-English to get the correct native script
+    WHISPER_MODEL_MULTILINGUAL = os.environ.get("WHISPER_MODEL_MULTILINGUAL", "small")
     WHISPER_DEVICE = os.environ.get("WHISPER_DEVICE", "cpu")
     WHISPER_COMPUTE = os.environ.get("WHISPER_COMPUTE", "int8")
 

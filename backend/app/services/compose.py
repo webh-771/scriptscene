@@ -73,6 +73,7 @@ def compose_video(
     w: int,
     h: int,
     style=None,
+    font=None,
     with_music: bool = True,
 ) -> Path:
     from moviepy import AudioFileClip, CompositeVideoClip, CompositeAudioClip
@@ -84,7 +85,7 @@ def compose_video(
 
     base, bg_sources = _build_base(bg_spec, narration_path, duration, w, h)
 
-    caption_clips = captions_svc.build_caption_clips(words, w, h, style)
+    caption_clips = captions_svc.build_caption_clips(words, w, h, style, font=font)
     video = CompositeVideoClip([base, *caption_clips], size=(w, h)).with_duration(duration)
 
     # Audio: narration + optional ducked background music

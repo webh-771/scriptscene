@@ -5,6 +5,7 @@ import logging
 
 from ..config import WORK_DIR, dims_for
 from ..db import update_job
+from ..languages import get as get_lang, font_path
 from ..models import GenerateRequest
 from . import story as story_svc
 from . import reddit as reddit_svc
@@ -38,7 +39,8 @@ def _resolve_content(req: GenerateRequest) -> dict:
             "background_query": req.niche,
         }
     if req.topic:
-        return story_svc.generate_content(req.topic, req.niche)
+        lang_name = get_lang(req.language)["name"]
+        return story_svc.generate_content(req.topic, req.niche, language=lang_name)
     raise RuntimeError("Provide one of: topic, reddit_url, or script")
 
 
@@ -67,12 +69,13 @@ def run_pipeline(job_id: str, req: GenerateRequest) -> None:
         _stage(job_id, 30, "generating voiceover")
         narration_path = tts_svc.synthesize(
             content["script"], WORK_DIR / f"{job_id}.mp3",
-            engine=req.tts_engine, voice=req.voice,
+            engine=req.tts_engine, voice=req.voice, language=req.language,
         )
 
         # 3. Word-level caption timing
         _stage(job_id, 50, "timing captions")
-        words = captions_svc.transcribe_words(narration_path)
+        words = captions_svc.transcribe_words(
+            narration_path, language=get_lang(req.language)["whisper"])
 
         # 4. Background
         _stage(job_id, 65, "preparing background")
@@ -82,7 +85,7 @@ def run_pipeline(job_id: str, req: GenerateRequest) -> None:
         _stage(job_id, 80, "rendering video")
         video_path = compose_svc.compose_video(
             job_id, bg_spec, narration_path, words, w, h,
-            style=req.captions, with_music=req.music,
+            style=req.captions, font=font_path(req.language), with_music=req.music,
         )
         video_url = f"/api/videos/{job_id}/download"
         update_job(job_id, video_url=video_url)

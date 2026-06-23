@@ -51,27 +51,32 @@ def _get_kokoro():
     return _kokoro
 
 
-def _kokoro_tts(text: str, voice: str, out_path: Path) -> Path:
+def _kokoro_tts(text: str, voice: str, lang: str, out_path: Path) -> Path:
     import soundfile as sf
-    samples, sr = _get_kokoro().create(text, voice=voice, speed=1.0, lang="en-us")
+    samples, sr = _get_kokoro().create(text, voice=voice, speed=1.0, lang=lang)
     wav_path = out_path.with_suffix(".wav")
     sf.write(str(wav_path), samples, sr)
-    logger.info("Kokoro voiceover: %s (%s)", wav_path.name, voice)
+    logger.info("Kokoro voiceover: %s (%s/%s)", wav_path.name, voice, lang)
     return wav_path
 
 
 # --- public ---
 def synthesize(text: str, out_path: Path, engine: Optional[str] = None,
-               voice: Optional[str] = None) -> Path:
+               voice: Optional[str] = None, language: str = "en") -> Path:
     """Write narration audio; returns the actual path (mp3 or wav)."""
+    from ..languages import get
     engine = engine or settings.TTS_ENGINE
+    lang = get(language)
 
     if engine == "kokoro":
-        return _kokoro_tts(text, voice or settings.KOKORO_VOICE, out_path)
+        if not lang["kokoro_lang"]:
+            logger.warning("Kokoro has no %s voice; using edge", lang["name"])
+        else:
+            return _kokoro_tts(text, voice or lang["kokoro"], lang["kokoro_lang"], out_path)
 
     # default: edge with gTTS fallback
     try:
-        result = _edge(text, voice or settings.TTS_VOICE, out_path)
+        result = _edge(text, voice or lang["edge"], out_path)
         logger.info("edge-tts voiceover: %s", result.name)
         return result
     except Exception as e:  # noqa: BLE001

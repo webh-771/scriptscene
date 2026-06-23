@@ -33,11 +33,15 @@ def _client():
     return Groq(api_key=settings.GROQ_API_KEY)
 
 
-def generate_content(topic: str, niche: str = "scary", voice_query: Optional[str] = None) -> dict:
+def generate_content(topic: str, niche: str = "scary", language: str = "English") -> dict:
     """Return {script, title, description, hashtags, background_query}."""
     style = _NICHE_HINTS.get(niche, _NICHE_HINTS["scary"])
     prompt = (
-        f"Topic: {topic}\nStyle: {style}\n\n"
+        f"Topic: {topic}\nStyle: {style}\n"
+        f"Write the script AND title in {language} using its NATIVE SCRIPT "
+        f"(e.g. Devanagari for Hindi, Arabic script for Arabic) — never romanized/"
+        f"transliterated. Natural, native {language}, not translated-sounding. "
+        f"Keep hashtags and background_query in English.\n\n"
         "Return STRICT JSON with keys: "
         "script (string, the narration only), "
         "title (string, <=90 chars, catchy, include a hook), "

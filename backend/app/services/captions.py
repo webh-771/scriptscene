@@ -13,25 +13,31 @@ _PUNCT = set(string.punctuation)
 
 logger = logging.getLogger(__name__)
 
-_model = None  # lazy singleton; model load is expensive
+_models = {}  # lazy singletons keyed by model name; load is expensive
 
 
-def _get_model():
-    global _model
-    if _model is None:
+def _get_model(name: str):
+    if name not in _models:
         from faster_whisper import WhisperModel
-        logger.info("Loading whisper model: %s", settings.WHISPER_MODEL)
-        _model = WhisperModel(
-            settings.WHISPER_MODEL,
-            device=settings.WHISPER_DEVICE,
-            compute_type=settings.WHISPER_COMPUTE,
+        logger.info("Loading whisper model: %s", name)
+        _models[name] = WhisperModel(
+            name, device=settings.WHISPER_DEVICE, compute_type=settings.WHISPER_COMPUTE,
         )
-    return _model
+    return _models[name]
 
 
-def transcribe_words(audio_path: Path) -> List[Dict]:
+def _model_for(language: str) -> str:
+    # base is fast and fine for English; non-English (esp. Hindi/Urdu) needs a
+    # bigger model to get the correct native script instead of boxes.
+    if language and language != "en":
+        return settings.WHISPER_MODEL_MULTILINGUAL
+    return settings.WHISPER_MODEL
+
+
+def transcribe_words(audio_path: Path, language: str = None) -> List[Dict]:
     """Return [{word, start, end}, ...] with timestamps in seconds."""
-    segments, _ = _get_model().transcribe(str(audio_path), word_timestamps=True)
+    segments, _ = _get_model(_model_for(language)).transcribe(
+        str(audio_path), word_timestamps=True, language=language)
     words: List[Dict] = []
     for seg in segments:
         for w in (seg.words or []):
@@ -95,9 +101,13 @@ def _ypos(position: str, clip_h: int, video_h: int):
     return max(margin, min(y, video_h - clip_h - margin))
 
 
-def build_caption_clips(words: List[Dict], video_w: int, video_h: int, style=None):
-    """Return moviepy TextClips styled per CaptionStyle (or sensible defaults)."""
+def build_caption_clips(words: List[Dict], video_w: int, video_h: int, style=None,
+                        font=None):
+    """Return moviepy TextClips styled per CaptionStyle (or sensible defaults).
+    `font` overrides the caption font (used for non-Latin scripts)."""
     from moviepy import TextClip
+
+    font = str(font or CAPTION_FONT)
 
     # style is a pydantic CaptionStyle or None
     color = getattr(style, "color", "#FFFFFF")
@@ -119,7 +129,7 @@ def build_caption_clips(words: List[Dict], video_w: int, video_h: int, style=Non
     for g in group_words(words, per_chunk, upper):
         duration = max(0.3, g["end"] - g["start"])
         kwargs = dict(
-            font=str(CAPTION_FONT), text=g["text"], font_size=font_size,
+            font=font, text=g["text"], font_size=font_size,
             color=color, stroke_color=stroke_c, stroke_width=stroke_w,
             method="caption", size=(box_w, None), text_align="center",
             # transparent padding so the stroke on the last line isn't clipped
