@@ -21,7 +21,7 @@ const VideoLibraryPage = () => {
 
   const fetchProjects = async () => {
     try {
-      const response = await axios.get(`${API}/video/projects`);
+      const response = await axios.get(`${API}/videos`);
       setProjects(response.data);
     } catch (error) {
       console.error('Failed to fetch projects:', error);
@@ -101,18 +101,20 @@ const VideoLibraryPage = () => {
 
 const ProjectCard = ({ project, index, onDownload }) => {
   const statusColors = {
-    completed: 'text-green-500',
-    processing: 'text-yellow-500',
+    done: 'text-green-500',
+    running: 'text-yellow-500',
     queued: 'text-blue-500',
-    failed: 'text-red-500'
+    error: 'text-red-500'
   };
 
   const statusLabels = {
-    completed: 'Completed',
-    processing: 'Processing',
+    done: 'Done',
+    running: 'Processing',
     queued: 'Queued',
-    failed: 'Failed'
+    error: 'Failed'
   };
+
+  const heading = project.title || project.topic || project.script || 'Untitled';
 
   return (
     <motion.div
@@ -125,7 +127,7 @@ const ProjectCard = ({ project, index, onDownload }) => {
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <CardTitle className="text-lg line-clamp-2">
-                {project.script.substring(0, 60)}...
+                {heading}
               </CardTitle>
               <div className="flex items-center gap-2 mt-2 text-sm text-gray-400">
                 <Clock className="h-4 w-4" />
@@ -175,7 +177,7 @@ const ProjectCard = ({ project, index, onDownload }) => {
           ) : (
             <div className="aspect-video bg-black/60 rounded-lg flex items-center justify-center">
               <p className="text-sm text-gray-500">
-                {project.status === 'failed' ? 'Generation failed' : 'Processing...'}
+                {project.status === 'error' ? 'Generation failed' : 'Processing...'}
               </p>
             </div>
           )}

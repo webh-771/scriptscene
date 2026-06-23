@@ -77,10 +77,15 @@ agenthub/agents/youtube/db
 .cache/
 
 # Generated runtime artifacts (keep dirs via .gitkeep)
-backend/audio_files/*
 backend/generated_videos/*
 backend/temp_media/*
+backend/assets/backgrounds/*
+backend/assets/music/*
 !backend/**/.gitkeep
+
+# Local DB + secrets
+backend/scriptscene.db
+backend/scripts/client_secret.json
 
 # Mobile development
 android-sdk/ frontend/node_modules/.cache/default-development/3.pack
@@ -90,3 +95,6 @@ frontend/node_modules/.cache/default-development/0.pack
 # Environment files
 *.env
 *.env.*
+
+# Keep example env templates
+!**/.env.example

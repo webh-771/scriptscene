@@ -1,346 +1,221 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
-import { ArrowLeft, Play, Download, Loader2, Music, Mic, Type } from 'lucide-react';
+import { ArrowLeft, Play, Download, Loader2, Mic, Type, Sparkles, Youtube } from 'lucide-react';
 import axios from 'axios';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
+const NICHES = [
+  { value: 'scary', label: 'SCARY / HORROR' },
+  { value: 'motivation', label: 'MOTIVATION' },
+  { value: 'facts', label: 'DID-YOU-KNOW FACTS' },
+  { value: 'finance', label: 'MONEY / FINANCE' },
+];
+
+const VOICES = [
+  { value: 'en-US-GuyNeural', label: 'GUY (M, US)' },
+  { value: 'en-US-AriaNeural', label: 'ARIA (F, US)' },
+  { value: 'en-US-ChristopherNeural', label: 'CHRISTOPHER (M, US)' },
+  { value: 'en-GB-RyanNeural', label: 'RYAN (M, UK)' },
+];
+
 const VideoGeneratorPage = () => {
   const navigate = useNavigate();
-  const [script, setScript] = useState('');
-  const [voiceStyle, setVoiceStyle] = useState('Puck');
-  const [selectedMusic, setSelectedMusic] = useState('');
-  const [includeSubtitles, setIncludeSubtitles] = useState(true);
-  const [videoFormat, setVideoFormat] = useState('vertical');
-  const [musicTracks, setMusicTracks] = useState([]);
+  const [topic, setTopic] = useState('');
+  const [niche, setNiche] = useState('scary');
+  const [voice, setVoice] = useState('en-US-GuyNeural');
+  const [music, setMusic] = useState(true);
+  const [publishYoutube, setPublishYoutube] = useState(false);
+
   const [isGenerating, setIsGenerating] = useState(false);
   const [jobId, setJobId] = useState(null);
   const [progress, setProgress] = useState(0);
-  const [statusMessage, setStatusMessage] = useState('');
+  const [stage, setStage] = useState('');
   const [videoUrl, setVideoUrl] = useState(null);
-
-  useEffect(() => {
-    fetchMusicTracks();
-  }, []);
+  const [youtubeUrl, setYoutubeUrl] = useState(null);
+  const [title, setTitle] = useState('');
 
   useEffect(() => {
     if (jobId && isGenerating) {
-      const interval = setInterval(() => {
-        checkVideoStatus();
-      }, 2000);
+      const interval = setInterval(checkStatus, 2000);
       return () => clearInterval(interval);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jobId, isGenerating]);
 
-  const fetchMusicTracks = async () => {
+  const checkStatus = async () => {
     try {
-      const response = await axios.get(`${API}/music/list`);
-      setMusicTracks(response.data.tracks);
-      if (response.data.tracks.length > 0) {
-        setSelectedMusic(response.data.tracks[0].url);
-      }
-    } catch (error) {
-      console.error('Failed to fetch music:', error);
-    }
-  };
+      const { data } = await axios.get(`${API}/videos/${jobId}/status`);
+      setProgress(data.progress || 0);
+      setStage((data.stage || '').toUpperCase());
+      if (data.title) setTitle(data.title);
 
-  const checkVideoStatus = async () => {
-    try {
-      const response = await axios.get(`${API}/video/status/${jobId}`);
-      const status = response.data;
-
-      setProgress(status.progress);
-      setStatusMessage(status.message);
-
-      if (status.status === 'completed') {
+      if (data.status === 'done') {
         setIsGenerating(false);
-        setVideoUrl(status.video_url);
-        toast.success('Video generated successfully!');
-      } else if (status.status === 'failed') {
+        setVideoUrl(data.video_url);
+        setYoutubeUrl(data.youtube_url);
+        toast.success('Video ready!');
+      } else if (data.status === 'error') {
         setIsGenerating(false);
-        toast.error(status.error || 'Video generation failed');
+        toast.error(data.error || 'Generation failed');
       }
-    } catch (error) {
-      console.error('Failed to check status:', error);
+    } catch (e) {
+      console.error('status check failed', e);
     }
   };
 
   const handleGenerate = async () => {
-    if (!script.trim()) {
-      toast.error('Please enter a script');
+    if (topic.trim().length < 3) {
+      toast.error('Enter a topic (3+ chars)');
       return;
     }
-
-    if (script.length < 10) {
-      toast.error('Script must be at least 10 characters');
-      return;
-    }
-
     setIsGenerating(true);
     setProgress(0);
     setVideoUrl(null);
-
+    setYoutubeUrl(null);
+    setTitle('');
     try {
-      const response = await axios.post(`${API}/video/generate`, {
-        script: script,
-        music_url: selectedMusic,
-        voice_style: voiceStyle,
-        include_subtitles: includeSubtitles,
-        video_format: videoFormat
+      const { data } = await axios.post(`${API}/videos/generate`, {
+        topic,
+        niche,
+        voice,
+        music,
+        publish_youtube: publishYoutube,
       });
-
-      setJobId(response.data.job_id);
-      toast.success('Video generation started!');
-    } catch (error) {
+      setJobId(data.job_id);
+      toast.success('Generation started!');
+    } catch (e) {
       setIsGenerating(false);
-      toast.error(error.response?.data?.detail || 'Failed to start video generation');
-    }
-  };
-
-  const handleDownload = () => {
-    if (videoUrl) {
-      window.open(`${BACKEND_URL}${videoUrl}`, '_blank');
+      toast.error(e.response?.data?.detail || 'Failed to start');
     }
   };
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="border-b-4 border-black bg-[#FFE66D]">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Button
-            data-testid="back-button"
-            onClick={() => navigate('/')}
-            className="brutal-button bg-white text-black hover:bg-white px-6"
-          >
-            <ArrowLeft className="h-5 w-5 mr-2" />
-            BACK
-          </Button>
-          <h1 className="text-3xl font-black uppercase">VIDEO GENERATOR</h1>
+          <button onClick={() => navigate('/')} className="brutal-button bg-white text-black px-6 flex items-center">
+            <ArrowLeft className="h-5 w-5 mr-2" /> BACK
+          </button>
+          <h1 className="text-3xl font-black uppercase">SHORTS GENERATOR</h1>
           <div className="w-28" />
         </div>
       </header>
 
-      {/* Main Content */}
       <div className="max-w-7xl mx-auto px-6 py-12">
         <div className="grid lg:grid-cols-2 gap-8">
-          {/* Left: Input Panel */}
-          <motion.div
-            initial={{ opacity: 0, x: -30 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="space-y-6"
-          >
-            {/* Script Input */}
+          {/* Inputs */}
+          <motion.div initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
             <div className="brutal-card bg-[#4ECDC4] p-6">
-              <div className="mb-4">
-                <h3 className="text-2xl font-black uppercase flex items-center gap-2">
-                  <Type className="h-6 w-6" />
-                  YOUR SCRIPT
-                </h3>
-                <p className="text-sm font-bold mt-1">WRITE YOUR VIDEO SCRIPT</p>
-              </div>
-              <div>
-                <textarea
-                  data-testid="script-input"
-                  placeholder="Enter your script here... Example: Create viral content now! AI makes video creation super easy and fast!"
-                  value={script}
-                  onChange={(e) => setScript(e.target.value)}
-                  rows={12}
-                  maxLength={5000}
-                  className="brutal-input w-full p-4 resize-none text-black placeholder:text-gray-600"
-                />
-                <div className="mt-2 text-sm font-bold">
-                  {script.length} / 5000 CHARACTERS
-                </div>
-              </div>
+              <h3 className="text-2xl font-black uppercase flex items-center gap-2 mb-1">
+                <Type className="h-6 w-6" /> TOPIC
+              </h3>
+              <p className="text-sm font-bold mb-4">ONE LINE — THE AI WRITES THE REST</p>
+              <input
+                data-testid="topic-input"
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
+                maxLength={300}
+                placeholder="e.g. a creepy story about the last subway train"
+                className="brutal-input w-full p-4 text-black placeholder:text-gray-600"
+              />
             </div>
 
-            {/* Voice Settings */}
-            <div className="brutal-card bg-[#FF6B6B] p-6">
-              <div className="mb-4">
-                <h3 className="text-2xl font-black uppercase flex items-center gap-2">
-                  <Mic className="h-6 w-6" />
-                  VOICE SETTINGS
-                </h3>
-              </div>
-              <div>
-                <label className="text-sm font-black mb-2 block uppercase">Voice Style</label>
-                <select
-                  data-testid="voice-select"
-                  value={voiceStyle}
-                  onChange={(e) => setVoiceStyle(e.target.value)}
-                  className="brutal-input w-full p-3 font-bold"
-                >
-                  <option value="Joanna">Joanna</option>
-                  <option value="Matthew">Matthew</option>
-                  <option value="Salli">Salli</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Music Selection */}
             <div className="brutal-card bg-[#FFE66D] p-6">
-              <div className="mb-4">
-                <h3 className="text-2xl font-black uppercase flex items-center gap-2">
-                  <Music className="h-6 w-6" />
-                  MUSIC
-                </h3>
-              </div>
-              <div>
-                <select
-                  data-testid="music-select"
-                  value={selectedMusic}
-                  onChange={(e) => setSelectedMusic(e.target.value)}
-                  className="brutal-input w-full p-3 font-bold"
-                >
-                  {musicTracks.map((track) => (
-                    <option key={track.id} value={track.url}>
-                      {track.title.toUpperCase()} - {track.genre.toUpperCase()}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <h3 className="text-xl font-black uppercase flex items-center gap-2 mb-3">
+                <Sparkles className="h-5 w-5" /> NICHE
+              </h3>
+              <select value={niche} onChange={(e) => setNiche(e.target.value)} className="brutal-input w-full p-3 font-bold">
+                {NICHES.map((n) => <option key={n.value} value={n.value}>{n.label}</option>)}
+              </select>
             </div>
 
-            {/* Video Format */}
             <div className="brutal-card bg-[#FF6B6B] p-6">
-              <div className="mb-4">
-                <h3 className="text-2xl font-black uppercase flex items-center gap-2">
-                  <Play className="h-6 w-6" />
-                  FORMAT
-                </h3>
-              </div>
-              <div>
-                <select
-                  data-testid="format-select"
-                  value={videoFormat}
-                  onChange={(e) => setVideoFormat(e.target.value)}
-                  className="brutal-input w-full p-3 font-bold"
-                >
-                  <option value="vertical">VERTICAL (9:16) - YOUTUBE SHORTS</option>
-                  <option value="horizontal">HORIZONTAL (16:9) - STANDARD</option>
-                </select>
-              </div>
+              <h3 className="text-xl font-black uppercase flex items-center gap-2 mb-3">
+                <Mic className="h-5 w-5" /> VOICE
+              </h3>
+              <select value={voice} onChange={(e) => setVoice(e.target.value)} className="brutal-input w-full p-3 font-bold">
+                {VOICES.map((v) => <option key={v.value} value={v.value}>{v.label}</option>)}
+              </select>
             </div>
 
-            {/* Subtitle Toggle */}
-            <div className="brutal-card bg-white p-6">
+            <div className="brutal-card bg-white p-6 space-y-4">
               <label className="flex items-center gap-4 cursor-pointer">
-                <input
-                  data-testid="subtitles-toggle"
-                  type="checkbox"
-                  checked={includeSubtitles}
-                  onChange={(e) => setIncludeSubtitles(e.target.checked)}
-                  className="w-6 h-6 border-3 border-black"
-                />
-                <span className="text-xl font-black uppercase">INCLUDE SUBTITLES</span>
+                <input type="checkbox" checked={music} onChange={(e) => setMusic(e.target.checked)} className="w-6 h-6 border-3 border-black" />
+                <span className="text-lg font-black uppercase">BACKGROUND MUSIC</span>
+              </label>
+              <label className="flex items-center gap-4 cursor-pointer">
+                <input data-testid="publish-toggle" type="checkbox" checked={publishYoutube} onChange={(e) => setPublishYoutube(e.target.checked)} className="w-6 h-6 border-3 border-black" />
+                <span className="text-lg font-black uppercase flex items-center gap-2"><Youtube className="h-5 w-5" /> AUTO-UPLOAD TO YOUTUBE</span>
               </label>
             </div>
 
-            {/* Generate Button */}
             <button
               data-testid="generate-button"
               onClick={handleGenerate}
-              disabled={isGenerating || !script.trim()}
-              className="brutal-button w-full h-20 bg-black text-white hover:bg-black disabled:opacity-50 disabled:cursor-not-allowed text-2xl"
+              disabled={isGenerating || topic.trim().length < 3}
+              className="brutal-button w-full h-20 bg-black text-white disabled:opacity-50 text-2xl"
             >
-              {isGenerating ? (
-                <>
-                  <Loader2 className="mr-3 h-7 w-7 animate-spin inline" />
-                  GENERATING...
-                </>
-              ) : (
-                <>
-                  <Play className="mr-3 h-7 w-7 inline" />
-                  GENERATE VIDEO NOW
-                </>
-              )}
+              {isGenerating
+                ? <><Loader2 className="mr-3 h-7 w-7 animate-spin inline" /> GENERATING...</>
+                : <><Play className="mr-3 h-7 w-7 inline" /> GENERATE SHORT</>}
             </button>
           </motion.div>
 
-          {/* Right: Preview Panel */}
-          <motion.div
-            initial={{ opacity: 0, x: 30 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="space-y-6"
-          >
+          {/* Preview */}
+          <motion.div initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
             <div className="brutal-card bg-white p-6">
-              <div className="mb-4">
-                <h2 className="text-2xl font-black uppercase">VIDEO PREVIEW</h2>
-                <p className="text-sm font-bold mt-1">YOUR GENERATED VIDEO APPEARS HERE</p>
-              </div>
-              <div>
-                {/* Video Player */}
-                <div className={`${videoFormat === 'vertical' ? 'aspect-[9/16] max-w-md mx-auto' : 'aspect-video'} bg-black border-4 border-black box-shadow-[8px_8px_0_0_black] mb-6`}>
-                  {videoUrl ? (
-                    <video
-                      data-testid="video-player"
-                      controls
-                      className="w-full h-full"
-                      src={`${BACKEND_URL}${videoUrl}`}
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                      <div className="text-center">
-                        <Play className="h-16 w-16 mx-auto mb-4" />
-                        <p className="font-bold uppercase">VIDEO PREVIEW</p>
-                        <p className="text-sm font-bold mt-2">
-                          {videoFormat === 'vertical' ? 'VERTICAL (9:16)' : 'HORIZONTAL (16:9)'}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Progress */}
-                {isGenerating && (
-                  <div data-testid="progress-container" className="space-y-3 brutal-card bg-[#FFE66D] p-4">
-                    <div className="w-full bg-white border-3 border-black h-8 relative overflow-hidden">
-                      <div
-                        className="h-full bg-black transition-all duration-300"
-                        style={{ width: `${progress}%` }}
-                      />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="font-black uppercase text-sm">{statusMessage}</span>
-                      <span className="font-black text-lg">{progress}%</span>
+              <h2 className="text-2xl font-black uppercase mb-1">PREVIEW</h2>
+              {title && <p className="text-sm font-bold mb-4">{title}</p>}
+              <div className="aspect-[9/16] max-w-md mx-auto bg-black border-4 border-black mb-6">
+                {videoUrl ? (
+                  <video data-testid="video-player" controls className="w-full h-full" src={`${BACKEND_URL}${videoUrl}`} />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                    <div className="text-center">
+                      <Play className="h-16 w-16 mx-auto mb-4" />
+                      <p className="font-bold uppercase">9:16 SHORT</p>
                     </div>
                   </div>
                 )}
-
-                {/* Download Button */}
-                {videoUrl && (
-                  <button
-                    data-testid="download-button"
-                    onClick={handleDownload}
-                    className="brutal-button w-full h-14 bg-[#4ECDC4] text-black hover:bg-[#4ECDC4] mt-4 text-xl"
-                  >
-                    <Download className="mr-2 h-6 w-6 inline" />
-                    DOWNLOAD VIDEO
-                  </button>
-                )}
               </div>
+
+              {isGenerating && (
+                <div className="space-y-3 brutal-card bg-[#FFE66D] p-4">
+                  <div className="w-full bg-white border-3 border-black h-8 overflow-hidden">
+                    <div className="h-full bg-black transition-all duration-300" style={{ width: `${progress}%` }} />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="font-black uppercase text-sm">{stage}</span>
+                    <span className="font-black text-lg">{progress}%</span>
+                  </div>
+                </div>
+              )}
+
+              {videoUrl && (
+                <button onClick={() => window.open(`${BACKEND_URL}${videoUrl}`, '_blank')} className="brutal-button w-full h-14 bg-[#4ECDC4] text-black mt-4 text-xl">
+                  <Download className="mr-2 h-6 w-6 inline" /> DOWNLOAD
+                </button>
+              )}
+              {youtubeUrl && (
+                <a href={youtubeUrl} target="_blank" rel="noreferrer" className="brutal-button w-full h-14 bg-[#FF6B6B] text-black mt-4 text-xl flex items-center justify-center">
+                  <Youtube className="mr-2 h-6 w-6 inline" /> VIEW ON YOUTUBE
+                </a>
+              )}
             </div>
 
-            {/* Tips Card */}
             <div className="brutal-card bg-[#FF6B6B] p-6">
-              <h3 className="text-xl font-black mb-4 uppercase">TIPS FOR BEST RESULTS</h3>
+              <h3 className="text-xl font-black mb-4 uppercase">HOW IT WORKS</h3>
               <ul className="space-y-2 text-sm font-bold">
-                <li>• KEEP SENTENCES CLEAR</li>
-                <li>• USE PUNCTUATION FOR PAUSES</li>
-                <li>• 100-500 WORDS WORKS BEST</li>
-                <li>• GENERATION TAKES 1-3 MIN</li>
-                <li>• VERTICAL = SHORTS/TIKTOK</li>
-                <li>• HORIZONTAL = YOUTUBE</li>
+                <li>• AI WRITES ORIGINAL SCRIPT (COPYRIGHT-CLEAN)</li>
+                <li>• FREE NEURAL VOICEOVER</li>
+                <li>• WORD-BY-WORD CAPTIONS</li>
+                <li>• ROYALTY-FREE / LOCAL BACKGROUND</li>
+                <li>• AUTO 9:16 FOR SHORTS</li>
+                <li>• OPTIONAL 1-CLICK YOUTUBE UPLOAD</li>
               </ul>
             </div>
           </motion.div>

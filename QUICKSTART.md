@@ -1,133 +1,54 @@
-# 🚀 ScriptScene Quick Start Guide
+# 🚀 ScriptScene Quick Start
 
-## Prerequisites Checklist
+Generate a free, faceless YouTube Short from a single topic.
 
-Before starting, ensure you have:
-- [ ] **Python 3.9+** installed ([Download](https://www.python.org/downloads/))
-- [ ] **Node.js 16+** installed ([Download](https://nodejs.org/))
-- [ ] **MongoDB** running (local or cloud)
-- [ ] **API Keys** ready:
-  - ElevenLabs API key ([Get it here](https://elevenlabs.io/))
-  - Google Gemini API key ([Get it here](https://makersuite.google.com/app/apikey))
-  - Pexels API key - Optional ([Get it here](https://www.pexels.com/api/))
+## Prerequisites
+- [ ] **Python 3.10+**
+- [ ] **Node.js 16+**
+- [ ] **ffmpeg** on PATH — `brew install ffmpeg`
+- [ ] **Groq API key** (free) — https://console.groq.com
+- [ ] *(optional)* Pexels/Pixabay key for auto b-roll, OR your own background videos
+- [ ] *(optional)* Google Cloud project for YouTube auto-upload
 
-## Setup Instructions
+No MongoDB. No ElevenLabs. No paid keys.
 
-### Step 1: Backend Setup
+## 1. Backend
+```bash
+cd backend
+python -m venv venv && source venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env        # set GROQ_API_KEY (minimum)
+uvicorn app.main:app --reload --port 8000
+```
+First run downloads the whisper model (~one-time).
 
-1. **Navigate to backend folder:**
-   ```bash
-   cd backend
-   ```
+Backgrounds: drop vertical mp4s into `assets/backgrounds/`, **or** set
+`PEXELS_API_KEY` / `PIXABAY_API_KEY` in `.env` to auto-fetch.
 
-2. **Run the setup script:**
-   ```bash
-   setup.bat
-   ```
-   This will:
-   - Create a Python virtual environment
-   - Install all dependencies
-   - Create a `.env` file from template
+## 2. Frontend
+```bash
+cd frontend
+npm install
+echo "REACT_APP_BACKEND_URL=http://localhost:8000" > .env
+npm start            # opens http://localhost:3000
+```
 
-3. **Configure your API keys:**
-   - Open `backend\.env` in a text editor
-   - Add your API keys:
-     ```env
-     ELEVENLABS_API_KEY=your_actual_key_here
-     GEMINI_API_KEY=your_actual_key_here
-     PEXELS_API_KEY=your_actual_key_here
-     ```
+## 3. Generate
+1. Open the app → **Shorts Generator**
+2. Type a **topic**, pick a **niche** + **voice**
+3. *(optional)* toggle **Auto-upload to YouTube**
+4. Hit **Generate** — watch progress, download or view on YouTube
 
-4. **Start the backend server:**
-   ```bash
-   start.bat
-   ```
-   - Server will run at: `http://localhost:8000`
-   - API docs at: `http://localhost:8000/docs`
+## YouTube upload (optional, one-time)
+1. Google Cloud → enable **YouTube Data API v3**
+2. OAuth consent screen → **External** → **Production**, add scope `youtube.upload`
+3. Create **Desktop** OAuth client → save JSON as `backend/scripts/client_secret.json`
+4. `python scripts/youtube_auth.py` → paste printed `YT_*` values into `.env`
 
-### Step 2: Frontend Setup
+Quota: ~6 uploads/day on the default 10,000 units.
 
-1. **Open a new terminal and navigate to frontend folder:**
-   ```bash
-   cd frontend
-   ```
-
-2. **Run the setup script:**
-   ```bash
-   setup.bat
-   ```
-   This will install all Node.js dependencies.
-
-3. **Start the frontend server:**
-   ```bash
-   start.bat
-   ```
-   - App will open at: `http://localhost:3000`
-
-## Verification
-
-### Test the Application
-
-1. **Open your browser** to `http://localhost:3000`
-2. **Navigate to** "Generate Video" page
-3. **Enter a test script:**
-   ```
-   Welcome to ScriptScene! This is an amazing AI-powered video generation platform that transforms your text into engaging videos.
-   ```
-4. **Click "Generate Video"**
-5. **Monitor progress** - you should see:
-   - ✅ Generating voiceover...
-   - ✅ Fetching stock media...
-   - ✅ Creating video...
-   - ✅ Video generated successfully!
-
-## Troubleshooting
-
-### Backend Issues
-
-**Error: "Module not found"**
-- Solution: Run `setup.bat` again in the backend folder
-
-**Error: "MongoDB connection failed"**
-- Solution: Ensure MongoDB is running
-- For local MongoDB: `mongod --dbpath C:\data\db`
-- Or use MongoDB Atlas (cloud)
-
-**Error: "401 Unauthorized" from ElevenLabs**
-- Solution: Check your `ELEVENLABS_API_KEY` in `.env` file
-- Ensure you're using a valid API key
-
-### Frontend Issues
-
-**Error: "Cannot connect to backend"**
-- Solution: Ensure backend server is running on port 8000
-- Check `http://localhost:8000/api/` returns a response
-
-**Error: "Dependencies not installed"**
-- Solution: Run `setup.bat` in the frontend folder
-
-## What Was Fixed
-
-### ElevenLabs API Update
-The application has been updated to use the **`eleven_turbo_v2_5`** model instead of the deprecated `eleven_monolingual_v1` model. This new model:
-- ✅ Works with free tier accounts
-- ✅ Provides faster generation
-- ✅ Offers better quality output
-
-## Next Steps
-
-Once everything is running:
-1. **Explore the Video Library** to see your generated videos
-2. **Experiment with different scripts** and settings
-3. **Try different video formats** (vertical vs horizontal)
-4. **Add background music** to your videos
-
-## Need Help?
-
-- Check the [README.md](../README.md) for detailed documentation
-- Review API docs at `http://localhost:8000/docs`
-- Ensure all API keys are correctly configured in `.env`
-
----
-
-**Happy video creating! 🎬**
+## Sanity check
+```bash
+curl localhost:8000/api/health
+# {"status":"ok","groq":true,"youtube":false,"broll":true}
+```
