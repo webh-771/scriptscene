@@ -10,7 +10,7 @@ from ..config import OUTPUT_DIR
 from ..db import get_job, update_job
 from ..models import PublishRequest
 from ..services import story as story_svc
-from ..services.publishers import youtube as yt_svc
+from ..services import uploader as uploader_svc
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/publish", tags=["publish"])
@@ -18,30 +18,10 @@ router = APIRouter(prefix="/publish", tags=["publish"])
 
 def _run_upload(job_id: str, req: PublishRequest) -> None:
     try:
-        job = get_job(job_id) or {}
-        title = req.title or job.get("title") or job.get("topic", "Short")
-        description = req.description or job.get("description", "")
-        tags = req.tags or job.get("hashtags", [])
-
-        if req.optimize:
-            update_job(job_id, upload_status="optimizing")
-            context = job.get("script") or job.get("topic", "")
-            meta = story_svc.optimize_metadata(context, title, description)
-            title, description, tags = meta["title"], meta["description"], meta["tags"]
-            update_job(job_id, title=title, description=description, hashtags=tags)
-
-        # Append required music attribution (CC-BY/CC-BY-SA) verbatim
-        credit = job.get("music_credit")
-        if credit and credit not in description:
-            description = f"{description}\n\n{credit}".strip()
-
-        update_job(job_id, upload_status="uploading")
-        url = yt_svc.upload_short(
-            OUTPUT_DIR / f"{job_id}.mp4", title=title, description=description,
-            hashtags=tags, privacy=req.privacy,
+        uploader_svc.upload_job(
+            job_id, optimize=req.optimize, privacy=req.privacy,
+            title=req.title, description=req.description, tags=req.tags,
         )
-        update_job(job_id, upload_status="uploaded", youtube_url=url, upload_error=None)
-        logger.info("[%s] uploaded -> %s", job_id, url)
     except Exception as e:  # noqa: BLE001
         logger.exception("[%s] upload failed", job_id)
         update_job(job_id, upload_status="error", upload_error=str(e))

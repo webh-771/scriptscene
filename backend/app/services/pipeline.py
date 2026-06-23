@@ -2,6 +2,7 @@
 -> (optional) publish. Updates job state at each stage.
 """
 import logging
+import math
 
 from ..config import WORK_DIR, dims_for
 from ..db import update_job
@@ -14,7 +15,7 @@ from . import captions as captions_svc
 from . import background as bg_svc
 from . import music as music_svc
 from . import compose as compose_svc
-from .publishers import youtube as yt_svc
+from . import uploader as uploader_svc
 
 logger = logging.getLogger(__name__)
 
@@ -45,16 +46,18 @@ def _resolve_content(req: GenerateRequest) -> dict:
     raise RuntimeError("Provide one of: topic, reddit_url, or script")
 
 
-def _resolve_background(job_id: str, req: GenerateRequest, content: dict) -> dict:
+def _resolve_background(job_id: str, req: GenerateRequest, content: dict,
+                        target_clips: int = 5) -> dict:
     spec = {"type": req.background_type}
     if req.background_type in ("broll", "gameplay"):
         if req.background_query:
             query = req.background_query           # explicit user override
         else:
             # derive scene keywords from the actual script so footage matches it
-            query = story_svc.scene_keywords(content["script"]) \
+            query = story_svc.scene_keywords(content["script"], count=min(target_clips, 8)) \
                 or content.get("background_query") or req.niche
-        spec["paths"] = bg_svc.resolve_backgrounds(job_id, query, req.background_file)
+        spec["paths"] = bg_svc.resolve_backgrounds(
+            job_id, query, req.background_file, count=target_clips)
     elif req.background_type == "gradient":
         spec["gradient"] = req.gradient
     elif req.background_type == "solid":
@@ -87,9 +90,12 @@ def run_pipeline(job_id: str, req: GenerateRequest) -> None:
             narration_path, language=get_lang(req.language)["whisper"],
             model_name=model_name)
 
-        # 4. Background
+        # 4. Background — fetch enough UNIQUE clips to cover the narration
+        # (~one new clip every ~4.5s) so the timeline never repeats a clip.
         _stage(job_id, 65, "preparing background")
-        bg_spec = _resolve_background(job_id, req, content)
+        approx_dur = words[-1]["end"] if words else 60.0
+        target_clips = max(4, min(12, math.ceil(approx_dur / 4.5)))
+        bg_spec = _resolve_background(job_id, req, content, target_clips)
 
         # 5. Compose (auto-fetch copyright-free music if library is empty)
         music_track, music_credit = None, None
@@ -108,13 +114,16 @@ def run_pipeline(job_id: str, req: GenerateRequest) -> None:
         video_url = f"/api/videos/{job_id}/download"
         update_job(job_id, video_url=video_url)
 
-        # 6. Optional publish
+        # 6. Optional auto-publish — AI-optimize title/description first
         youtube_url = None
+        update_job(job_id, status="done", progress=100, stage="done", video_url=video_url)
         if req.publish_youtube:
-            _stage(job_id, 90, "uploading to youtube")
-            youtube_url = yt_svc.upload_short(
-                video_path, content["title"], content["description"], content["hashtags"]
-            )
+            _stage(job_id, 95, "uploading to youtube")
+            try:
+                youtube_url = uploader_svc.upload_job(job_id, optimize=True)
+            except Exception as e:  # noqa: BLE001
+                logger.exception("[%s] auto-upload failed", job_id)
+                update_job(job_id, upload_status="error", upload_error=str(e))
 
         update_job(job_id, status="done", progress=100, stage="done",
                    video_url=video_url, youtube_url=youtube_url)

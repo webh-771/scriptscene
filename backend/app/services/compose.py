@@ -20,26 +20,31 @@ def _cover_crop(clip, w: int, h: int):
     return clip.cropped(width=w, height=h, x_center=clip.w / 2, y_center=clip.h / 2)
 
 
-def _build_background(paths: List[Path], duration: float, w: int, h: int,
-                      segment: float = 4.0):
-    """Stitch a varied background: cut ~`segment`s chunks, cycling through the
-    available clips (and through different parts of each) until `duration` is
-    covered. Keeps the viewer's eye moving instead of looping one shot."""
-    from moviepy import VideoFileClip, concatenate_videoclips
+def _segment_of_length(src, length: float):
+    """A `length`-second piece of src: random window if long enough, else loop
+    the clip onto itself (never reuses a *different* video)."""
+    from moviepy import concatenate_videoclips
+    if src.duration >= length:
+        start = random.uniform(0, src.duration - length)
+        return src.subclipped(start, start + length)
+    loops = int(length // src.duration) + 1
+    return concatenate_videoclips([src] * loops).subclipped(0, length)
+
+
+def _build_background(paths: List[Path], duration: float, w: int, h: int):
+    """Stitch the background so EACH clip is shown exactly once, in order —
+    never repeating a clip. Segment length = duration / number of clips."""
+    from moviepy import concatenate_videoclips
+    from moviepy import VideoFileClip
 
     sources = [VideoFileClip(str(p)).without_audio() for p in paths]
+    n = max(1, len(sources))
+    seg_len = duration / n
+
     segments = []
-    total = 0.0
-    idx = 0
-    while total < duration:
-        src = sources[idx % len(sources)]
-        seg_len = min(segment, max(1.0, src.duration))
-        max_start = max(0, src.duration - seg_len)
-        start = random.uniform(0, max_start) if max_start > 0 else 0
-        seg = src.subclipped(start, start + seg_len)
+    for src in sources:
+        seg = _segment_of_length(src, seg_len)
         segments.append(_cover_crop(seg, w, h))
-        total += seg_len
-        idx += 1
 
     bg = concatenate_videoclips(segments).subclipped(0, duration)
     return bg, sources

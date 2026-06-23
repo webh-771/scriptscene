@@ -95,19 +95,25 @@ def resolve_backgrounds(job_id: str, query, prefer_file: Optional[str] = None,
     if not queries:
         queries = ["abstract motion"]
 
-    # One clip per keyword (so footage matches the narration), then top up to
-    # `count` from the first keyword if a list was short.
+    # Fetch `count` UNIQUE clips, spread across the keywords (several per
+    # keyword if needed) so the timeline never reuses a clip.
+    import math
+    per = max(1, math.ceil(count / len(queries)))
     clips: List[Path] = []
-    seen_idx = 0
-    pool = queries if len(queries) >= count else queries + [queries[0]] * (count - len(queries))
-    for q in pool[:count]:
-        got = _fetch_one(q, f"{job_id}_{seen_idx}")
-        seen_idx += 1
-        if got:
-            clips.append(got)
+    seen = set()
+    i = 0
+    for q in queries:
+        if len(clips) >= count:
+            break
+        for got in _fetch_many(q, f"{job_id}_{i}", per):
+            if got and got.name not in seen:
+                seen.add(got.name)
+                clips.append(got)
+        i += 1
+
     if clips:
-        logger.info("Fetched %d clips for keywords: %s", len(clips), queries)
-        return clips
+        logger.info("Fetched %d unique clips for keywords: %s", len(clips), queries)
+        return clips[:count]
 
     raise RuntimeError(
         "No background available: add a video to assets/backgrounds/ "
@@ -115,13 +121,13 @@ def resolve_backgrounds(job_id: str, query, prefer_file: Optional[str] = None,
     )
 
 
-def _fetch_one(query: str, tag: str) -> Optional[Path]:
-    """Fetch a single clip for one keyword via Pexels then Pixabay."""
+def _fetch_many(query: str, tag: str, n: int) -> List[Path]:
+    """Fetch up to n distinct clips for one keyword via Pexels then Pixabay."""
     for fetcher in (_fetch_pexels, _fetch_pixabay):
         try:
-            got = fetcher(query, tag, 1)
+            got = fetcher(query, tag, n)
             if got:
-                return got[0]
+                return got
         except Exception as e:  # noqa: BLE001
             logger.warning("%s failed for '%s': %s", fetcher.__name__, query, e)
-    return None
+    return []

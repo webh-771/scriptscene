@@ -163,62 +163,22 @@ const VideoGeneratorPage = () => {
 
   // job
   const [isGenerating, setIsGenerating] = useState(false);
-  const [jobId, setJobId] = useState(null);
-  const [progress, setProgress] = useState(0);
-  const [stage, setStage] = useState('');
-  const [videoUrl, setVideoUrl] = useState(null);
-  const [youtubeUrl, setYoutubeUrl] = useState(null);
-  const [title, setTitle] = useState('');
 
   // keep voice valid when engine or language switches
   const voiceList = (VOICES[engine] && VOICES[engine][language]) || [];
   useEffect(() => { setVoice(voiceList[0]?.value || ''); }, [engine, language]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => {
-    if (jobId && isGenerating) {
-      const interval = setInterval(checkStatus, 2000);
-      return () => clearInterval(interval);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [jobId, isGenerating]);
-
-  const checkStatus = async () => {
-    try {
-      const { data } = await axios.get(`${API}/videos/${jobId}/status`);
-      setProgress(data.progress || 0);
-      setStage((data.stage || '').toUpperCase());
-      if (data.title) setTitle(data.title);
-      if (data.status === 'done') {
-        setIsGenerating(false);
-        setVideoUrl(data.video_url);
-        setYoutubeUrl(data.youtube_url);
-        toast.success('Video ready!');
-      } else if (data.status === 'error') {
-        setIsGenerating(false);
-        toast.error(data.error || 'Generation failed');
-      }
-    } catch (e) { console.error(e); }
-  };
-
+  // topic source accepts MULTIPLE topics, one per line -> one job each
+  const topicList = () => topic.split('\n').map((t) => t.trim()).filter((t) => t.length >= 3);
   const validSource = () =>
-    (source === 'topic' && topic.trim().length >= 3) ||
+    (source === 'topic' && topicList().length > 0) ||
     (source === 'script' && script.trim().length >= 10);
 
-  const handleGenerate = async () => {
-    if (!validSource()) { toast.error('Fill the content source first'); return; }
-    setIsGenerating(true); setProgress(0);
-    setVideoUrl(null); setYoutubeUrl(null); setTitle('');
-
-    const payload = {
-      niche,
-      language,
-      tts_engine: engine,
-      voice,
-      background_type: bgType,
-      aspect,
-      music,
-      music_volume: Number(musicVolume),
-      publish_youtube: publishYoutube,
+  const basePayload = () => {
+    const p = {
+      niche, language, tts_engine: engine, voice,
+      background_type: bgType, aspect, music,
+      music_volume: Number(musicVolume), publish_youtube: publishYoutube,
       captions: {
         preset, position, words_per_chunk: Number(wordsPerChunk),
         color: capColor, highlight: highlight || null,
@@ -226,24 +186,32 @@ const VideoGeneratorPage = () => {
         pill, uppercase,
       },
     };
-    if (source === 'topic') payload.topic = topic;
-    if (source === 'script') payload.script = script;
-    if (bgType === 'broll' || bgType === 'gameplay') payload.background_query = bgQuery || null;
-    if (bgType === 'gradient') payload.gradient = gradient;
-    if (bgType === 'solid') payload.solid_color = solidColor;
-
-    try {
-      const { data } = await axios.post(`${API}/videos/generate`, payload);
-      setJobId(data.job_id);
-      toast.success('Job started — view progress on Jobs');
-      navigate('/jobs');
-    } catch (e) {
-      setIsGenerating(false);
-      toast.error(e.response?.data?.detail || 'Failed to start');
-    }
+    if (bgType === 'broll' || bgType === 'gameplay') p.background_query = bgQuery || null;
+    if (bgType === 'gradient') p.gradient = gradient;
+    if (bgType === 'solid') p.solid_color = solidColor;
+    return p;
   };
 
-  const previewAspect = aspect === '9:16' ? 'aspect-[9/16] max-w-xs' : aspect === '1:1' ? 'aspect-square max-w-sm' : 'aspect-video max-w-md';
+  const handleGenerate = async () => {
+    if (!validSource()) { toast.error('Add at least one topic / a script'); return; }
+    setIsGenerating(true);
+
+    const jobs = source === 'topic'
+      ? topicList().map((t) => ({ ...basePayload(), topic: t }))
+      : [{ ...basePayload(), script }];
+
+    try {
+      let ok = 0;
+      for (const payload of jobs) {
+        try { await axios.post(`${API}/videos/generate`, payload); ok += 1; }
+        catch (e) { console.error('job failed', e); }
+      }
+      toast.success(`${ok} job${ok === 1 ? '' : 's'} started${publishYoutube ? ' — will auto-upload' : ''}`);
+      navigate('/jobs');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -257,10 +225,10 @@ const VideoGeneratorPage = () => {
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-6 py-12">
-        <div className="grid lg:grid-cols-2 gap-8">
+      <div className="max-w-2xl mx-auto px-6 py-12">
+        <div>
           {/* CONTROLS */}
-          <motion.div initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
 
             {/* Source */}
             <div className="brutal-card bg-[#4ECDC4] p-6">
@@ -274,9 +242,12 @@ const VideoGeneratorPage = () => {
                 ))}
               </div>
               {source === 'topic' && (
-                <input value={topic} onChange={(e) => setTopic(e.target.value)} maxLength={300}
-                  placeholder="e.g. a creepy story about the last subway train"
-                  className="brutal-input w-full p-4 text-black placeholder:text-gray-600" />
+                <div>
+                  <textarea value={topic} onChange={(e) => setTopic(e.target.value)} rows={4}
+                    placeholder={'One topic per line — each makes its own video:\nthe last subway train mystery\n3 facts about black holes\nhow compound interest works'}
+                    className="brutal-input w-full p-4 text-black placeholder:text-gray-600 resize-none" />
+                  <p className="text-xs font-bold mt-1">{topicList().length} TOPIC(S) → {topicList().length} VIDEO(S)</p>
+                </div>
               )}
               {source === 'script' && (
                 <textarea value={script} onChange={(e) => setScript(e.target.value)} rows={5}
@@ -433,47 +404,6 @@ const VideoGeneratorPage = () => {
                 ? <><Loader2 className="mr-3 h-7 w-7 animate-spin inline" /> GENERATING...</>
                 : <><Play className="mr-3 h-7 w-7 inline" /> GENERATE</>}
             </button>
-          </motion.div>
-
-          {/* PREVIEW */}
-          <motion.div initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} className="space-y-6 lg:sticky lg:top-6 self-start">
-            <div className="brutal-card bg-white p-6">
-              <h2 className="text-2xl font-black uppercase mb-1">PREVIEW</h2>
-              {title && <p className="text-sm font-bold mb-4">{title}</p>}
-              <div className={`${previewAspect} mx-auto bg-black border-4 border-black mb-6`}>
-                {videoUrl ? (
-                  <video controls className="w-full h-full" src={`${BACKEND_URL}${videoUrl}`} />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                    <div className="text-center">
-                      <Play className="h-16 w-16 mx-auto mb-4" />
-                      <p className="font-bold uppercase">{aspect}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-              {isGenerating && (
-                <div className="space-y-3 brutal-card bg-[#FFE66D] p-4">
-                  <div className="w-full bg-white border-3 border-black h-8 overflow-hidden">
-                    <div className="h-full bg-black transition-all duration-300" style={{ width: `${progress}%` }} />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="font-black uppercase text-sm">{stage}</span>
-                    <span className="font-black text-lg">{progress}%</span>
-                  </div>
-                </div>
-              )}
-              {videoUrl && (
-                <button onClick={() => window.open(`${BACKEND_URL}${videoUrl}`, '_blank')} className="brutal-button w-full h-14 bg-[#4ECDC4] text-black mt-4 text-xl">
-                  <Download className="mr-2 h-6 w-6 inline" /> DOWNLOAD
-                </button>
-              )}
-              {youtubeUrl && (
-                <a href={youtubeUrl} target="_blank" rel="noreferrer" className="brutal-button w-full h-14 bg-[#FF6B6B] text-black mt-4 text-xl flex items-center justify-center">
-                  <Youtube className="mr-2 h-6 w-6 inline" /> VIEW ON YOUTUBE
-                </a>
-              )}
-            </div>
           </motion.div>
         </div>
       </div>
