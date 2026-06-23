@@ -73,3 +73,41 @@ def generate_content(topic: str, niche: str = "scary", language: str = "English"
     data.setdefault("background_query", niche)
     logger.info("Generated script (%d chars) for niche=%s", len(data["script"]), niche)
     return data
+
+
+_SEO_SYSTEM = (
+    "You are a YouTube SEO expert for faceless short-form channels. Optimize "
+    "metadata for maximum reach and click-through. Titles are punchy and "
+    "keyword-rich (front-load the hook). Descriptions are 2-3 sentences with a "
+    "soft call-to-action. Tags are high-intent search keywords."
+)
+
+
+def optimize_metadata(context: str, title: str = "", description: str = "") -> dict:
+    """Return SEO-optimized {title, description, tags} for a YouTube Short."""
+    prompt = (
+        f"Video context / script:\n{context[:1500]}\n\n"
+        f"Draft title: {title}\nDraft description: {description}\n\n"
+        "Return STRICT JSON with keys: "
+        "title (<=90 chars, hooky, keyword-rich), "
+        "description (2-3 sentences + soft CTA, include 3-5 hashtags at the end), "
+        "tags (array of 10-15 high-intent search keywords, no # symbol)."
+    )
+    resp = _client().chat.completions.create(
+        model=settings.GROQ_MODEL,
+        messages=[
+            {"role": "system", "content": _SEO_SYSTEM},
+            {"role": "user", "content": prompt},
+        ],
+        temperature=0.7,
+        response_format={"type": "json_object"},
+    )
+    data = json.loads(resp.choices[0].message.content)
+    data.setdefault("title", title or "Short")
+    data.setdefault("description", description or "")
+    tags = data.get("tags") or []
+    if isinstance(tags, str):
+        tags = [t.strip().lstrip("#") for t in tags.split(",") if t.strip()]
+    data["tags"] = [str(t).lstrip("#") for t in tags][:15] or ["Shorts"]
+    logger.info("Optimized metadata: '%s' (%d tags)", data["title"][:50], len(data["tags"]))
+    return data

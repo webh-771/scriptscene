@@ -222,7 +222,8 @@ const VideoGeneratorPage = () => {
     try {
       const { data } = await axios.post(`${API}/videos/generate`, payload);
       setJobId(data.job_id);
-      toast.success('Generation started!');
+      toast.success('Job started — view progress on Jobs');
+      navigate('/jobs');
     } catch (e) {
       setIsGenerating(false);
       toast.error(e.response?.data?.detail || 'Failed to start');
@@ -239,7 +240,7 @@ const VideoGeneratorPage = () => {
             <ArrowLeft className="h-5 w-5 mr-2" /> BACK
           </button>
           <h1 className="text-3xl font-black uppercase">STUDIO</h1>
-          <div className="w-28" />
+          <button onClick={() => navigate('/jobs')} className="brutal-button bg-white text-black px-6">JOBS</button>
         </div>
       </header>
 

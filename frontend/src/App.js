@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from '@/components/ui/sonner';
 import HomePage from './pages/HomePage';
 import VideoGeneratorPage from './pages/VideoGeneratorPage';
-import VideoLibraryPage from './pages/VideoLibraryPage';
+import JobsPage from './pages/VideoLibraryPage';
 import '@/App.css';
 
 function App() {
@@ -12,7 +12,8 @@ function App() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/generate" element={<VideoGeneratorPage />} />
-          <Route path="/library" element={<VideoLibraryPage />} />
+          <Route path="/jobs" element={<JobsPage />} />
+          <Route path="/library" element={<JobsPage />} />
         </Routes>
       </BrowserRouter>
       <Toaster position="top-right" richColors />

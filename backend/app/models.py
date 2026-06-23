@@ -60,5 +60,15 @@ class JobStatus(BaseModel):
     title: Optional[str] = None
     video_url: Optional[str] = None
     youtube_url: Optional[str] = None
+    upload_status: Optional[str] = None   # queued | optimizing | uploading | uploaded | error
+    upload_error: Optional[str] = None
     error: Optional[str] = None
     created_at: str
+
+
+class PublishRequest(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    tags: Optional[list] = None
+    privacy: str = "public"               # public | unlisted | private
+    optimize: bool = True                 # run Groq SEO pass on the metadata

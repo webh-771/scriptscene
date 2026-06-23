@@ -1,190 +1,201 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Play, Download, Clock, FileVideo } from 'lucide-react';
+import { toast } from 'sonner';
+import { ArrowLeft, Download, Youtube, Loader2, Sparkles, X, RefreshCw } from 'lucide-react';
 import axios from 'axios';
-import { format } from 'date-fns';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
-const VideoLibraryPage = () => {
-  const navigate = useNavigate();
-  const [projects, setProjects] = useState([]);
-  const [loading, setLoading] = useState(true);
+const STATUS_COLOR = {
+  done: 'bg-[#4ECDC4]', running: 'bg-[#FFE66D]', queued: 'bg-white', error: 'bg-[#FF6B6B]',
+};
 
-  useEffect(() => {
-    fetchProjects();
+const JobsPage = () => {
+  const navigate = useNavigate();
+  const [jobs, setJobs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [publishJob, setPublishJob] = useState(null);   // job being published (modal)
+
+  const fetchJobs = useCallback(async () => {
+    try {
+      const { data } = await axios.get(`${API}/videos`);
+      setJobs(data);
+    } catch (e) { console.error(e); } finally { setLoading(false); }
   }, []);
 
-  const fetchProjects = async () => {
-    try {
-      const response = await axios.get(`${API}/videos`);
-      setProjects(response.data);
-    } catch (error) {
-      console.error('Failed to fetch projects:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDownload = (videoUrl) => {
-    window.open(`${BACKEND_URL}${videoUrl}`, '_blank');
-  };
+  useEffect(() => {
+    fetchJobs();
+    const t = setInterval(fetchJobs, 3000);   // live updates for running/uploading jobs
+    return () => clearInterval(t);
+  }, [fetchJobs]);
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-white/10 bg-black/40 backdrop-blur-xl">
+      <header className="border-b-4 border-black bg-[#FFE66D]">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Button
-            data-testid="back-button"
-            variant="ghost"
-            onClick={() => navigate('/')}
-            className="flex items-center gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back
-          </Button>
-          <h1 className="text-2xl font-heading font-bold">Video Library</h1>
-          <Button
-            data-testid="create-new-button"
-            onClick={() => navigate('/generate')}
-            className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500"
-          >
-            Create New
-          </Button>
+          <button onClick={() => navigate('/')} className="brutal-button bg-white text-black px-6 flex items-center">
+            <ArrowLeft className="h-5 w-5 mr-2" /> BACK
+          </button>
+          <h1 className="text-3xl font-black uppercase">JOBS</h1>
+          <button onClick={() => navigate('/generate')} className="brutal-button bg-black text-white px-6">
+            + NEW
+          </button>
         </div>
       </header>
 
-      {/* Content */}
-      <div className="max-w-7xl mx-auto px-6 py-12">
+      <div className="max-w-7xl mx-auto px-6 py-10">
         {loading ? (
+          <p className="font-black uppercase">Loading…</p>
+        ) : jobs.length === 0 ? (
           <div className="text-center py-20">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent" />
-            <p className="mt-4 text-gray-400">Loading projects...</p>
+            <p className="text-2xl font-black uppercase mb-4">No jobs yet</p>
+            <button onClick={() => navigate('/generate')} className="brutal-button bg-black text-white px-8 h-14 text-xl">
+              CREATE ONE
+            </button>
           </div>
-        ) : projects.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center py-20"
-          >
-            <FileVideo className="h-20 w-20 mx-auto text-gray-600 mb-4" />
-            <h2 className="text-2xl font-heading font-bold mb-2">No videos yet</h2>
-            <p className="text-gray-400 mb-6">Create your first video to get started</p>
-            <Button
-              onClick={() => navigate('/generate')}
-              className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500"
-            >
-              Create Video
-            </Button>
-          </motion.div>
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {projects.map((project, index) => (
-              <ProjectCard
-                key={project.job_id}
-                project={project}
-                index={index}
-                onDownload={handleDownload}
-              />
+            {jobs.map((j) => (
+              <JobCard key={j.job_id} job={j} onPublish={() => setPublishJob(j)} />
             ))}
           </div>
         )}
+      </div>
+
+      {publishJob && (
+        <PublishModal job={publishJob} onClose={() => setPublishJob(null)} onDone={fetchJobs} />
+      )}
+    </div>
+  );
+};
+
+const JobCard = ({ job, onPublish }) => {
+  const done = job.status === 'done';
+  const up = job.upload_status;
+  return (
+    <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+      className="brutal-card bg-white p-4">
+      <div className="flex items-center justify-between mb-2">
+        <span className={`px-2 py-1 text-xs font-black uppercase border-2 border-black ${STATUS_COLOR[job.status] || 'bg-white'}`}>
+          {job.status}{job.status === 'running' ? ` ${job.progress}%` : ''}
+        </span>
+        {up && <span className="text-xs font-black uppercase">{up === 'uploaded' ? '✓ ON YT' : `YT: ${up}`}</span>}
+      </div>
+      <p className="font-black text-sm mb-3 line-clamp-2">{job.title || job.topic || 'Untitled'}</p>
+
+      <div className="aspect-[9/16] max-h-64 mx-auto bg-black border-2 border-black mb-3">
+        {done && job.video_url
+          ? <video controls className="w-full h-full" src={`${BACKEND_URL}${job.video_url}`} />
+          : <div className="w-full h-full flex items-center justify-center">
+              {job.status === 'error'
+                ? <span className="text-[#FF6B6B] font-black text-xs px-2 text-center">{job.error || 'FAILED'}</span>
+                : <Loader2 className="h-8 w-8 animate-spin text-white" />}
+            </div>}
+      </div>
+
+      {done && (
+        <div className="flex gap-2">
+          <a href={`${BACKEND_URL}${job.video_url}`} target="_blank" rel="noreferrer"
+            className="brutal-button flex-1 bg-[#4ECDC4] text-black py-2 text-sm text-center flex items-center justify-center">
+            <Download className="h-4 w-4 mr-1" /> SAVE
+          </a>
+          {job.youtube_url
+            ? <a href={job.youtube_url} target="_blank" rel="noreferrer"
+                className="brutal-button flex-1 bg-[#FF6B6B] text-black py-2 text-sm text-center flex items-center justify-center">
+                <Youtube className="h-4 w-4 mr-1" /> VIEW
+              </a>
+            : <button onClick={onPublish} disabled={up === 'uploading' || up === 'optimizing' || up === 'queued'}
+                className="brutal-button flex-1 bg-black text-white py-2 text-sm disabled:opacity-50 flex items-center justify-center">
+                {(up === 'uploading' || up === 'optimizing' || up === 'queued')
+                  ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> {up.toUpperCase()}</>
+                  : <><Youtube className="h-4 w-4 mr-1" /> UPLOAD</>}
+              </button>}
+        </div>
+      )}
+      {up === 'error' && <p className="text-xs font-bold text-[#FF6B6B] mt-2">{job.upload_error}</p>}
+    </motion.div>
+  );
+};
+
+const PublishModal = ({ job, onClose, onDone }) => {
+  const [title, setTitle] = useState(job.title || job.topic || '');
+  const [description, setDescription] = useState(job.description || '');
+  const [tags, setTags] = useState((job.hashtags || []).join(', '));
+  const [privacy, setPrivacy] = useState('public');
+  const [optimize, setOptimize] = useState(true);
+  const [suggesting, setSuggesting] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const suggest = async () => {
+    setSuggesting(true);
+    try {
+      const { data } = await axios.get(`${API}/publish/${job.job_id}/metadata`);
+      setTitle(data.title); setDescription(data.description); setTags((data.tags || []).join(', '));
+      toast.success('AI suggestions filled in');
+    } catch (e) { toast.error('Suggestion failed'); } finally { setSuggesting(false); }
+  };
+
+  const submit = async () => {
+    setSubmitting(true);
+    try {
+      await axios.post(`${API}/publish/${job.job_id}/youtube`, {
+        title, description,
+        tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
+        privacy, optimize,
+      });
+      toast.success('Upload queued — track it on the card');
+      onDone(); onClose();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || 'Failed to queue upload');
+    } finally { setSubmitting(false); }
+  };
+
+  const inp = 'brutal-input w-full p-3 font-bold';
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
+      <div className="brutal-card bg-white p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-2xl font-black uppercase">UPLOAD TO YOUTUBE</h2>
+          <button onClick={onClose}><X className="h-6 w-6" /></button>
+        </div>
+
+        <button onClick={suggest} disabled={suggesting}
+          className="brutal-button bg-[#FFE66D] text-black w-full py-2 mb-4 flex items-center justify-center">
+          {suggesting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
+          SUGGEST WITH AI
+        </button>
+
+        <label className="text-xs font-black uppercase block mb-1">Title</label>
+        <input value={title} onChange={(e) => setTitle(e.target.value)} className={`${inp} mb-3`} maxLength={100} />
+
+        <label className="text-xs font-black uppercase block mb-1">Description</label>
+        <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} className={`${inp} mb-3 resize-none`} />
+
+        <label className="text-xs font-black uppercase block mb-1">Tags (comma-separated)</label>
+        <input value={tags} onChange={(e) => setTags(e.target.value)} className={`${inp} mb-3`} />
+
+        <label className="text-xs font-black uppercase block mb-1">Privacy</label>
+        <select value={privacy} onChange={(e) => setPrivacy(e.target.value)} className={`${inp} mb-3`}>
+          <option value="public">PUBLIC</option>
+          <option value="unlisted">UNLISTED</option>
+          <option value="private">PRIVATE</option>
+        </select>
+
+        <label className="flex items-center gap-3 cursor-pointer mb-4">
+          <input type="checkbox" checked={optimize} onChange={(e) => setOptimize(e.target.checked)} className="w-5 h-5 border-3 border-black" />
+          <span className="font-black uppercase text-sm">Re-optimize with AI before upload</span>
+        </label>
+
+        <button onClick={submit} disabled={submitting}
+          className="brutal-button bg-black text-white w-full h-14 text-xl disabled:opacity-50 flex items-center justify-center">
+          {submitting ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : <Youtube className="h-5 w-5 mr-2" />}
+          QUEUE UPLOAD
+        </button>
       </div>
     </div>
   );
 };
 
-const ProjectCard = ({ project, index, onDownload }) => {
-  const statusColors = {
-    done: 'text-green-500',
-    running: 'text-yellow-500',
-    queued: 'text-blue-500',
-    error: 'text-red-500'
-  };
-
-  const statusLabels = {
-    done: 'Done',
-    running: 'Processing',
-    queued: 'Queued',
-    error: 'Failed'
-  };
-
-  const heading = project.title || project.topic || project.script || 'Untitled';
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.1 }}
-    >
-      <Card className="glass border-white/10 h-full hover:border-primary/50 transition-colors duration-300">
-        <CardHeader>
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <CardTitle className="text-lg line-clamp-2">
-                {heading}
-              </CardTitle>
-              <div className="flex items-center gap-2 mt-2 text-sm text-gray-400">
-                <Clock className="h-4 w-4" />
-                {format(new Date(project.created_at), 'MMM dd, yyyy')}
-              </div>
-            </div>
-            <span className={`text-xs font-medium ${statusColors[project.status]}`}>
-              {statusLabels[project.status]}
-            </span>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {project.video_url ? (
-            <div className="space-y-3">
-              <div className="aspect-video bg-black rounded-lg overflow-hidden">
-                <video
-                  className="w-full h-full object-cover"
-                  src={`${BACKEND_URL}${project.video_url}`}
-                  controls={false}
-                />
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  className="flex-1"
-                  variant="outline"
-                  onClick={() => {
-                    const video = document.querySelector(`video[src="${BACKEND_URL}${project.video_url}"]`);
-                    if (video) {
-                      video.play();
-                    }
-                  }}
-                >
-                  <Play className="h-4 w-4 mr-1" />
-                  Play
-                </Button>
-                <Button
-                  size="sm"
-                  className="flex-1 bg-gradient-to-r from-indigo-600 to-violet-600"
-                  onClick={() => onDownload(project.video_url)}
-                >
-                  <Download className="h-4 w-4 mr-1" />
-                  Download
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <div className="aspect-video bg-black/60 rounded-lg flex items-center justify-center">
-              <p className="text-sm text-gray-500">
-                {project.status === 'error' ? 'Generation failed' : 'Processing...'}
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </motion.div>
-  );
-};
-
-export default VideoLibraryPage;
+export default JobsPage;
