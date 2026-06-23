@@ -8,6 +8,16 @@ import axios from 'axios';
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
+const LANGUAGES = [
+  { value: 'en', label: 'ENGLISH' },
+  { value: 'hi', label: 'HINDI (हिन्दी)' },
+  { value: 'es', label: 'SPANISH' },
+  { value: 'fr', label: 'FRENCH' },
+  { value: 'de', label: 'GERMAN' },
+  { value: 'pt', label: 'PORTUGUESE' },
+  { value: 'it', label: 'ITALIAN' },
+];
+
 const NICHES = [
   { value: 'scary', label: 'SCARY / HORROR' },
   { value: 'motivation', label: 'MOTIVATION' },
@@ -64,6 +74,7 @@ const VideoGeneratorPage = () => {
   const [redditUrl, setRedditUrl] = useState('');
   const [script, setScript] = useState('');
   const [niche, setNiche] = useState('scary');
+  const [language, setLanguage] = useState('en');
 
   // voice
   const [engine, setEngine] = useState('edge');
@@ -140,8 +151,11 @@ const VideoGeneratorPage = () => {
 
     const payload = {
       niche,
+      language,
       tts_engine: engine,
-      voice,
+      // our voice lists are English-centric; for other languages let the
+      // backend pick that language's default voice
+      voice: language === 'en' ? voice : null,
       background_type: bgType,
       aspect,
       music,
@@ -215,15 +229,20 @@ const VideoGeneratorPage = () => {
                   placeholder="Paste your own script verbatim..."
                   className="brutal-input w-full p-4 text-black placeholder:text-gray-600 resize-none" />
               )}
-              {source !== 'script' && (
-                <div className="mt-3">
+              <div className="grid grid-cols-2 gap-3 mt-3">
+                {source !== 'script' && (
                   <Field label="Niche">
                     <select value={niche} onChange={(e) => setNiche(e.target.value)} className={sel}>
                       {NICHES.map((n) => <option key={n.value} value={n.value}>{n.label}</option>)}
                     </select>
                   </Field>
-                </div>
-              )}
+                )}
+                <Field label="Language">
+                  <select value={language} onChange={(e) => setLanguage(e.target.value)} className={sel}>
+                    {LANGUAGES.map((l) => <option key={l.value} value={l.value}>{l.label}</option>)}
+                  </select>
+                </Field>
+              </div>
             </div>
 
             {/* Voice */}
@@ -239,11 +258,15 @@ const VideoGeneratorPage = () => {
                   ))}
                 </div>
               </Field>
-              <Field label="Voice">
-                <select value={voice} onChange={(e) => setVoice(e.target.value)} className={sel}>
-                  {VOICES[engine].map((v) => <option key={v.value} value={v.value}>{v.label}</option>)}
-                </select>
-              </Field>
+              {language === 'en' ? (
+                <Field label="Voice">
+                  <select value={voice} onChange={(e) => setVoice(e.target.value)} className={sel}>
+                    {VOICES[engine].map((v) => <option key={v.value} value={v.value}>{v.label}</option>)}
+                  </select>
+                </Field>
+              ) : (
+                <p className="text-sm font-bold mt-2">Uses the default {engine.toUpperCase()} voice for the selected language.</p>
+              )}
             </div>
 
             {/* Background */}
