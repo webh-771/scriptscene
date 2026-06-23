@@ -13,7 +13,6 @@ const LANGUAGES = [
   { value: 'hi', label: 'HINDI (हिन्दी)' },
   { value: 'es', label: 'SPANISH' },
   { value: 'fr', label: 'FRENCH' },
-  { value: 'de', label: 'GERMAN' },
   { value: 'pt', label: 'PORTUGUESE' },
   { value: 'it', label: 'ITALIAN' },
 ];
@@ -25,21 +24,44 @@ const NICHES = [
   { value: 'finance', label: 'MONEY / FINANCE' },
 ];
 
+// Kokoro voices grouped by language.
 const VOICES = {
-  edge: [
-    { value: 'en-US-AndrewNeural', label: 'ANDREW (M, NATURAL)' },
-    { value: 'en-US-AvaNeural', label: 'AVA (F, NATURAL)' },
-    { value: 'en-US-EmmaNeural', label: 'EMMA (F, NATURAL)' },
-    { value: 'en-US-BrianNeural', label: 'BRIAN (M, NATURAL)' },
-    { value: 'en-GB-RyanNeural', label: 'RYAN (M, UK)' },
-  ],
-  kokoro: [
-    { value: 'am_michael', label: 'MICHAEL (M)' },
-    { value: 'am_adam', label: 'ADAM (M)' },
-    { value: 'af_heart', label: 'HEART (F)' },
-    { value: 'af_bella', label: 'BELLA (F)' },
+  en: [
+    { value: 'am_michael', label: 'MICHAEL (M, US)' },
+    { value: 'am_adam', label: 'ADAM (M, US)' },
+    { value: 'am_onyx', label: 'ONYX (M, US)' },
+    { value: 'am_puck', label: 'PUCK (M, US)' },
+    { value: 'af_heart', label: 'HEART (F, US)' },
+    { value: 'af_bella', label: 'BELLA (F, US)' },
+    { value: 'af_nicole', label: 'NICOLE (F, US)' },
+    { value: 'af_sky', label: 'SKY (F, US)' },
     { value: 'bm_george', label: 'GEORGE (M, UK)' },
+    { value: 'bm_lewis', label: 'LEWIS (M, UK)' },
     { value: 'bf_emma', label: 'EMMA (F, UK)' },
+    { value: 'bf_isabella', label: 'ISABELLA (F, UK)' },
+  ],
+  hi: [
+    { value: 'hm_omega', label: 'OMEGA (M)' },
+    { value: 'hm_psi', label: 'PSI (M)' },
+    { value: 'hf_alpha', label: 'ALPHA (F)' },
+    { value: 'hf_beta', label: 'BETA (F)' },
+  ],
+  es: [
+    { value: 'em_alex', label: 'ALEX (M)' },
+    { value: 'em_santa', label: 'SANTA (M)' },
+    { value: 'ef_dora', label: 'DORA (F)' },
+  ],
+  fr: [
+    { value: 'ff_siwis', label: 'SIWIS (F)' },
+  ],
+  pt: [
+    { value: 'pm_alex', label: 'ALEX (M)' },
+    { value: 'pm_santa', label: 'SANTA (M)' },
+    { value: 'pf_dora', label: 'DORA (F)' },
+  ],
+  it: [
+    { value: 'im_nicola', label: 'NICOLA (M)' },
+    { value: 'if_sara', label: 'SARA (F)' },
   ],
 };
 
@@ -69,16 +91,14 @@ const VideoGeneratorPage = () => {
   const navigate = useNavigate();
 
   // source
-  const [source, setSource] = useState('topic');     // topic | reddit | script
+  const [source, setSource] = useState('topic');     // topic | script
   const [topic, setTopic] = useState('');
-  const [redditUrl, setRedditUrl] = useState('');
   const [script, setScript] = useState('');
   const [niche, setNiche] = useState('scary');
   const [language, setLanguage] = useState('en');
 
-  // voice
-  const [engine, setEngine] = useState('edge');
-  const [voice, setVoice] = useState('en-US-AndrewNeural');
+  // voice (Kokoro, per language)
+  const [voice, setVoice] = useState(VOICES.en[0].value);
 
   // background
   const [bgType, setBgType] = useState('broll');
@@ -110,8 +130,8 @@ const VideoGeneratorPage = () => {
   const [youtubeUrl, setYoutubeUrl] = useState(null);
   const [title, setTitle] = useState('');
 
-  // keep voice valid when engine switches
-  useEffect(() => { setVoice(VOICES[engine][0].value); }, [engine]);
+  // keep voice valid when language switches
+  useEffect(() => { setVoice(VOICES[language][0].value); }, [language]);
 
   useEffect(() => {
     if (jobId && isGenerating) {
@@ -141,7 +161,6 @@ const VideoGeneratorPage = () => {
 
   const validSource = () =>
     (source === 'topic' && topic.trim().length >= 3) ||
-    (source === 'reddit' && redditUrl.includes('reddit.com')) ||
     (source === 'script' && script.trim().length >= 10);
 
   const handleGenerate = async () => {
@@ -152,10 +171,8 @@ const VideoGeneratorPage = () => {
     const payload = {
       niche,
       language,
-      tts_engine: engine,
-      // our voice lists are English-centric; for other languages let the
-      // backend pick that language's default voice
-      voice: language === 'en' ? voice : null,
+      tts_engine: 'kokoro',
+      voice,
       background_type: bgType,
       aspect,
       music,
@@ -168,7 +185,6 @@ const VideoGeneratorPage = () => {
       },
     };
     if (source === 'topic') payload.topic = topic;
-    if (source === 'reddit') payload.reddit_url = redditUrl;
     if (source === 'script') payload.script = script;
     if (bgType === 'broll' || bgType === 'gameplay') payload.background_query = bgQuery || null;
     if (bgType === 'gradient') payload.gradient = gradient;
@@ -207,7 +223,7 @@ const VideoGeneratorPage = () => {
             <div className="brutal-card bg-[#4ECDC4] p-6">
               <h3 className="text-xl font-black uppercase flex items-center gap-2 mb-3"><Type className="h-5 w-5" /> CONTENT</h3>
               <div className="flex gap-2 mb-4">
-                {['topic', 'reddit', 'script'].map((s) => (
+                {['topic', 'script'].map((s) => (
                   <button key={s} onClick={() => setSource(s)}
                     className={`brutal-button flex-1 py-2 text-sm ${source === s ? 'bg-black text-white' : 'bg-white text-black'}`}>
                     {s.toUpperCase()}
@@ -217,11 +233,6 @@ const VideoGeneratorPage = () => {
               {source === 'topic' && (
                 <input value={topic} onChange={(e) => setTopic(e.target.value)} maxLength={300}
                   placeholder="e.g. a creepy story about the last subway train"
-                  className="brutal-input w-full p-4 text-black placeholder:text-gray-600" />
-              )}
-              {source === 'reddit' && (
-                <input value={redditUrl} onChange={(e) => setRedditUrl(e.target.value)}
-                  placeholder="https://www.reddit.com/r/tifu/comments/..."
                   className="brutal-input w-full p-4 text-black placeholder:text-gray-600" />
               )}
               {source === 'script' && (
@@ -248,25 +259,11 @@ const VideoGeneratorPage = () => {
             {/* Voice */}
             <div className="brutal-card bg-[#FF6B6B] p-6">
               <h3 className="text-xl font-black uppercase flex items-center gap-2 mb-3"><Mic className="h-5 w-5" /> VOICE</h3>
-              <Field label="Engine">
-                <div className="flex gap-2">
-                  {['edge', 'kokoro'].map((e) => (
-                    <button key={e} onClick={() => setEngine(e)}
-                      className={`brutal-button flex-1 py-2 text-sm ${engine === e ? 'bg-black text-white' : 'bg-white text-black'}`}>
-                      {e === 'edge' ? 'EDGE (CLOUD)' : 'KOKORO (LOCAL)'}
-                    </button>
-                  ))}
-                </div>
+              <Field label="Voice (Kokoro)">
+                <select value={voice} onChange={(e) => setVoice(e.target.value)} className={sel}>
+                  {VOICES[language].map((v) => <option key={v.value} value={v.value}>{v.label}</option>)}
+                </select>
               </Field>
-              {language === 'en' ? (
-                <Field label="Voice">
-                  <select value={voice} onChange={(e) => setVoice(e.target.value)} className={sel}>
-                    {VOICES[engine].map((v) => <option key={v.value} value={v.value}>{v.label}</option>)}
-                  </select>
-                </Field>
-              ) : (
-                <p className="text-sm font-bold mt-2">Uses the default {engine.toUpperCase()} voice for the selected language.</p>
-              )}
             </div>
 
             {/* Background */}
