@@ -22,6 +22,18 @@ const NICHES = [
   { value: 'motivation', label: 'MOTIVATION' },
   { value: 'facts', label: 'DID-YOU-KNOW FACTS' },
   { value: 'finance', label: 'MONEY / FINANCE' },
+  { value: 'history', label: 'HISTORY' },
+  { value: 'truecrime', label: 'TRUE CRIME' },
+  { value: 'psychology', label: 'PSYCHOLOGY' },
+  { value: 'space', label: 'SPACE / ASTRONOMY' },
+  { value: 'tech', label: 'TECH / AI' },
+  { value: 'business', label: 'BUSINESS' },
+  { value: 'health', label: 'HEALTH / FITNESS' },
+  { value: 'relationships', label: 'RELATIONSHIPS' },
+  { value: 'mystery', label: 'MYSTERY' },
+  { value: 'philosophy', label: 'PHILOSOPHY' },
+  { value: 'lifehacks', label: 'LIFE HACKS' },
+  { value: 'comedy', label: 'COMEDY' },
 ];
 
 // Kokoro voices grouped by language.
@@ -100,7 +112,8 @@ const BACKGROUNDS = [
 
 const GRADIENTS = ['aurora', 'sunset', 'mint', 'violet', 'noir'];
 const ASPECTS = [{ value: '9:16', label: '9:16' }, { value: '1:1', label: '1:1' }, { value: '16:9', label: '16:9' }];
-const PRESETS = ['storytime', 'top5', 'didyouknow', 'hottake', 'explainer', 'tutorial', 'mythbuster', 'casestudy'];
+const PRESETS = ['storytime', 'top5', 'didyouknow', 'hottake', 'explainer', 'tutorial', 'mythbuster', 'casestudy',
+  'horror', 'truecrime', 'history', 'space', 'psychology', 'finance', 'comedy', 'luxury', 'gaming', 'news', 'quote', 'countdown', 'minimal', 'neon'];
 const POSITIONS = ['top', 'middle', 'bottom'];
 const PILLS = ['none', 'filled', 'outline'];
 

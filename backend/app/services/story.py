@@ -16,6 +16,18 @@ _NICHE_HINTS = {
     "motivation": "a punchy, uplifting motivational monologue",
     "facts": "a fast-paced list of surprising 'did you know' facts",
     "finance": "a clear, practical money/finance tip explained simply",
+    "history": "a gripping retelling of a little-known historical event or figure",
+    "truecrime": "a chilling true-crime-style case told with suspense (original/fictional)",
+    "psychology": "a fascinating psychology fact or mind trick about human behavior",
+    "space": "an awe-inspiring astronomy/space fact that reframes how we see the universe",
+    "tech": "a surprising technology or AI insight explained for a general audience",
+    "business": "a sharp business/startup lesson or case study with a takeaway",
+    "health": "a practical, sensible health or fitness tip with the reasoning",
+    "relationships": "a relatable dating/relationship insight or short story",
+    "mystery": "an eerie unsolved mystery or unexplained phenomenon",
+    "philosophy": "a thought-provoking philosophical idea made simple and vivid",
+    "lifehacks": "a clever life hack that saves time, money, or effort",
+    "comedy": "a witty, dry-humor take or absurd short story with a punchline",
 }
 
 _SYSTEM = (

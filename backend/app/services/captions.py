@@ -79,6 +79,11 @@ PRESET_ACCENT = {
     "storytime": "#FF6FB5", "top5": "#22D3EE", "didyouknow": "#22C55E",
     "hottake": "#F97316", "explainer": "#38BDF8", "tutorial": "#8B5CF6",
     "mythbuster": "#EF4444", "casestudy": "#F59E0B",
+    "horror": "#B91C1C", "truecrime": "#DC2626", "history": "#D4A017",
+    "space": "#60A5FA", "psychology": "#14B8A6", "finance": "#16A34A",
+    "comedy": "#FACC15", "luxury": "#EAB308", "gaming": "#A855F7",
+    "news": "#E11D48", "quote": "#F8FAFC", "countdown": "#06B6D4",
+    "minimal": "#FFFFFF", "neon": "#39FF14",
 }
 
 

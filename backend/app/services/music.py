@@ -23,6 +23,18 @@ MOOD_TAGS = {
     "motivation": "epic+inspiring",
     "facts": "ambient+corporate",
     "finance": "corporate+calm",
+    "history": "cinematic+documentary",
+    "truecrime": "dark+suspense",
+    "psychology": "ambient+thoughtful",
+    "space": "ambient+cinematic",
+    "tech": "electronic+ambient",
+    "business": "corporate+motivational",
+    "health": "calm+uplifting",
+    "relationships": "emotional+acoustic",
+    "mystery": "dark+mysterious",
+    "philosophy": "ambient+calm",
+    "lifehacks": "upbeat+corporate",
+    "comedy": "quirky+upbeat",
     "default": "ambient+instrumental",
 }
 
