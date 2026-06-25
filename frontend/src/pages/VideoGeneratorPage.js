@@ -169,6 +169,7 @@ const VideoGeneratorPage = () => {
   useEffect(() => { setVoice(voiceList[0]?.value || ''); }, [engine, language]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // topic source accepts MULTIPLE topics, one per line -> one job each
+  const TOPIC_MAX = 300;   // matches backend GenerateRequest.topic max_length
   const topicList = () => topic.split('\n').map((t) => t.trim()).filter((t) => t.length >= 3);
   const validSource = () =>
     (source === 'topic' && topicList().length > 0) ||
@@ -192,8 +193,24 @@ const VideoGeneratorPage = () => {
     return p;
   };
 
+  // pull a human-readable reason out of a FastAPI/axios error
+  const errMsg = (e) => {
+    const d = e.response?.data?.detail;
+    if (Array.isArray(d)) return d.map((x) => x.msg).join('; ');
+    return d || e.message || 'request failed';
+  };
+
   const handleGenerate = async () => {
     if (!validSource()) { toast.error('Add at least one topic / a script'); return; }
+
+    if (source === 'topic') {
+      const tooLong = topicList().filter((t) => t.length > TOPIC_MAX);
+      if (tooLong.length) {
+        toast.error(`Topic too long (max ${TOPIC_MAX} chars) — use SCRIPT for long text. Offending: "${tooLong[0].slice(0, 40)}…"`);
+        return;
+      }
+    }
+
     setIsGenerating(true);
 
     const jobs = source === 'topic'
@@ -204,10 +221,12 @@ const VideoGeneratorPage = () => {
       let ok = 0;
       for (const payload of jobs) {
         try { await axios.post(`${API}/videos/generate`, payload); ok += 1; }
-        catch (e) { console.error('job failed', e); }
+        catch (e) { console.error('job failed', e); toast.error(`Job failed: ${errMsg(e)}`); }
       }
-      toast.success(`${ok} job${ok === 1 ? '' : 's'} started${publishYoutube ? ' — will auto-upload' : ''}`);
-      navigate('/jobs');
+      if (ok) {
+        toast.success(`${ok} job${ok === 1 ? '' : 's'} started${publishYoutube ? ' — will auto-upload' : ''}`);
+        navigate('/jobs');
+      }
     } finally {
       setIsGenerating(false);
     }
@@ -247,6 +266,11 @@ const VideoGeneratorPage = () => {
                     placeholder={'One topic per line — each makes its own video:\nthe last subway train mystery\n3 facts about black holes\nhow compound interest works'}
                     className="brutal-input w-full p-4 text-black placeholder:text-gray-600 resize-none" />
                   <p className="text-xs font-bold mt-1">{topicList().length} TOPIC(S) → {topicList().length} VIDEO(S)</p>
+                  {topicList().some((t) => t.length > TOPIC_MAX) && (
+                    <p className="text-xs font-bold mt-1 text-red-700">
+                      ⚠ A topic exceeds {TOPIC_MAX} chars — shorten it or use the SCRIPT tab for long text.
+                    </p>
+                  )}
                 </div>
               )}
               {source === 'script' && (
